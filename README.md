@@ -58,3 +58,43 @@ Return result     Run agents
     2. The system performs RAG over the investigation's evidence and responds: "The conclusion is primarily based on sources A, B and C..."
     3. "What evidence contradicts that?"
     4. The system retrieves the contradictory evidence and provides it
+
+
+## Project File Structure
+root_dir/
+├── pyproject.toml
+├── README.md
+├── .env
+├── .gitignore
+│
+├── src/
+│   └── agentic_news/
+│       ├── __init__.py
+│       │
+│       ├── main.py                 # FastAPI application entry point
+│       │
+│       ├── api/
+│       │   ├── __init__.py
+│       │   └── routes/
+│       │       ├── __init__.py
+│       │       └── agents.py       # API endpoints
+│       │
+│       ├── agents/
+│       │   ├── __init__.py
+│       │   ├── base.py             # Shared agent abstractions
+│       │   ├── research_agent.py
+│       │   └── ...
+│       │
+│       ├── services/
+│       │   ├── __init__.py
+│       │   └── ...                 # External APIs, DB, etc.
+│       │
+│       └── config.py               # Environment/configuration
+│
+└── tests/
+    ├── __init__.py
+    ├── api/
+    │   └── test_agents.py
+    ├── agents/
+    │   └── test_research_agent.py
+    └── conftest.py
