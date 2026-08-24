@@ -34,6 +34,7 @@ Chain of thought will be exposed and visible for all to see. Therefore, users ca
 
 ### Cost Saving
 I'm not made of money, so I'd like to keep as much of what I have as possible. I'm going to follow this architecture so that I can cache the redundant searches:
+```text
 User
   │
   ▼
@@ -49,6 +50,7 @@ Return result     Run agents
            │
            ▼
         Cache
+```
 
 ## Features
 - Trending Investigations: This is going to be a page that tracks what is currently trending and will fire an update for those topics occasionally.
@@ -61,6 +63,7 @@ Return result     Run agents
 
 
 ## Project File Structure
+```
 root_dir/
 ├── pyproject.toml
 ├── README.md
@@ -98,3 +101,4 @@ root_dir/
     ├── agents/
     │   └── test_research_agent.py
     └── conftest.py
+```
