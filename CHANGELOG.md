@@ -1,5 +1,11 @@
 # CHANGELOG
 
+## [0.1.2] - 2026-08-24
+Changed:
+- Adjusted README to fix view of file structures on github
+- Created first implementation of the research agent, fact_checking agent, synthesis_agent, and the results_acceptable function
+- Changed the manner we call the Language Model to Google API preferred methods
+
 ## [0.1.1] - 2026-08-23
 Added:
 - Added a "results_acceptable" function to have an agent determine if the results obtained sufficiently answer a research question thoroughly enough or if more research is needed. Implementation needed
