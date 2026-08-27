@@ -1,5 +1,14 @@
 # CHANGELOG
 
+## [0.1.3] - 2026-08-26
+Changed:
+- Fixed type hint for tool calls list in research_agent.py
+- Changed file structure to not have an extra "agentic_news" directory under "src". For now, we will have the different available services under "src"
+- Adjusted all functions using the genai.Client command to take in an API key
+- Set up an initial test for main.py using an api_key loaded from .env
+- Commented out the "research_unwrapper" usage - we'll likely have the model innteractions handle this for us
+- Adjusted the LLM calls so that the proper arguments are passed
+
 ## [0.1.2] - 2026-08-24
 Changed:
 - Adjusted README to fix view of file structures on github

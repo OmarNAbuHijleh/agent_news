@@ -3,29 +3,30 @@ from collections.abc import Callable
 from typing import Any
 import json
 
+
 _research_agent_prompt: str = "Given the research plan, perform tool calls in succession to execute the steps for that research plan. Cite your sources when steps are completed."
-_TOOLS: list[dict[str, str], Callable[..., Any]]  = [
+_TOOLS: list[dict[str, str] | Callable[..., Any]]  = [
     {"type": "google_search"},
+    {"type": "url_context"},
+    # TODO: Consider adding the file search tool from Google. We also need to add our own custom tools once we refine agent functions and determine the flow of obtaining cached contents in databases
 ]
 
-def research_agent(research_plan: str) -> str:
+
+def research_agent(research_plan: str, api_key: str) -> str:
     """Given a research plan string, we want to have our language model perform the tool calls to fulfill each research step until it completes the research.
     Args:
         research_plan <str>: The research plan string that will be followed, with the results provided
     Returns:
         <str>: The results of the research plan
     """
-
     return_text: str = ""
-    client = genai.Client()
+    client = genai.Client(api_key=api_key)
     # create the research agent
     interaction = client.interactions.create(
         model="gemini-3.7-flash",
-        config={
-            "system_instruction": _research_agent_prompt
-        },
-        contents=research_plan,
-        tools=_TOOLS
+        system_instruction=_research_agent_prompt,
+        tools=_TOOLS,
+        input=research_plan,
     )
 
     return_text += f"{interaction.output_text}\n"
