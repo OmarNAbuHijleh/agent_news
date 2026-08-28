@@ -18,6 +18,6 @@ def synthesis_agent(client: genai.Client, research_contents: list[ResearchStep])
         model="gemini-3.1-flash-lite",
         system_instruction=_synthesis_prompt,
         input=research_history_to_text(research_contents)
-    ))
+    ), stage="synthesis_agent")
 
     return response.output_text

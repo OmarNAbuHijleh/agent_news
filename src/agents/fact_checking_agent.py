@@ -17,5 +17,5 @@ def fact_checking_agent(client: genai.Client, research_results: str) -> str:
         model="gemini-3.1-flash",
         system_instruction=_fact_checking_prompt,
         user_content=research_results,
-    ))
+    ), stage="fact_checking_agent")
     return interaction.output_text

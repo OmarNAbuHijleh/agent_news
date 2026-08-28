@@ -1,3 +1,4 @@
+import logging
 from .agents.research_orchestrator import ResearchOrchestrator
 from config import GEMINI_API_KEY
 
@@ -10,4 +11,5 @@ def main():
     print(research_results)
 
 if __name__ == "__main__":
+    logging.basicConfig(level=logging.INFO, format="%(levelname)s %(name)s: %(message)s")
     main()

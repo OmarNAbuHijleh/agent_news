@@ -44,7 +44,7 @@ class ResearchOrchestrator:
             model="gemini-3.1-flash-lite",
             input=contents_for_model,
             system_instruction=_research_agent_system_prompt
-        ))
+        ), stage="create_plan")
         return response.output_text or "" # TODO: Handle the "None" case later
 
     def results_acceptable(self, research_results: str, fact_checking_results: str, user_input_query: str, research_so_far: list[ResearchStep]) -> tuple[bool, str]:
@@ -63,7 +63,7 @@ class ResearchOrchestrator:
             input=contents_for_model,
             model="gemini-3.1-flash-lite",
             system_instruction=_results_satisfied_check_prompt
-        ))
+        ), stage="results_acceptable")
         if response.output_text == "SATISFIED":
             return False, ""
         elif response.output_text == "UNSATISFIED":

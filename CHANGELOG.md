@@ -1,5 +1,11 @@
 # CHANGELOG
 
+## [0.1.6] - 2026-08-27
+Added:
+- Per-stage token usage logging in `call_with_retry` (`retry.py`), so cost can be tracked per pipeline stage via the `usage` field on each interaction
+- `MAX_RESEARCH_AGENT_TOOL_ROUNDS` and `RESEARCH_AGENT_MAX_OUTPUT_TOKENS` config values to bound `research_agent`'s tool-calling loop, which previously had no cap on rounds or per-call output size
+- `logging.basicConfig` in `main.py` so usage/warning logs are visible when run directly
+
 ## [0.1.5] - 2026-08-27
 Changed:
 - Introduced `ResearchOrchestrator`, replacing the free-standing `research_process_loop`/`create_plan`/`results_acceptable` functions. It owns a single `genai.Client` for the whole research session, and that client is now passed into `research_agent`, `fact_checking_agent`, and `synthesis_agent` instead of each one constructing its own client from an API key
