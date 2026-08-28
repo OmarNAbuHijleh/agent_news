@@ -1,33 +1,23 @@
-from .agent_type_enum import AgentType
 from google import genai
+from .research_step import ResearchStep
+from .research_utils import research_history_to_text
+from .retry import call_with_retry
 
 _synthesis_prompt: str = "You have been given the results of research into a specific query and the research tasks performed. Synthesize the results as a short summary for delivery."
 
-def _research_unwrapper(research_so_far: list[tuple[AgentType, str]]) -> str:
-    """Helper function to unwrap a list of research tuples for passing into a language model.
-    Args:
-        research_so_far <list[tuple[AgentType, str]]>: A list of tuples containing the results of research performed so far.
-    Returns:
-        <str>: A stringified version of the research already performed for language model ingestion
-    """
-    ret_string: str = "### RESEARCH CYCLES ALREADY PERFORMED\n"
-    for agent_type, results in research_so_far:
-        ret_string += f"# {agent_type}\n{results}\n"
-    return ret_string
 
-
-def synthesis_agent(research_contents: list[tuple[AgentType, str]], api_key: str) -> str:
+def synthesis_agent(client: genai.Client, research_contents: list[ResearchStep]) -> str:
     """Takes the research_contents and produces a synthesized output
     Args:
-        research_contents <list<tuple<AgentType, str>>>: A list of research plans, results, and fact-checkings
+        client <genai.Client>: The shared client for this research session
+        research_contents <list[ResearchStep]>: The research plans, results, and fact-checkings performed
     Returns:
         <str>: A summary of all of the results
     """
-    client = genai.Client(api_key=api_key)
-    response = client.interactions.create(
+    response = call_with_retry(lambda: client.interactions.create(
         model="gemini-3.1-flash-lite",
         system_instruction=_synthesis_prompt,
-        input=research_contents
-    )
+        input=research_history_to_text(research_contents)
+    ))
 
     return response.output_text

@@ -1,5 +1,24 @@
 # CHANGELOG
 
+## [0.1.5] - 2026-08-27
+Changed:
+- Introduced `ResearchOrchestrator`, replacing the free-standing `research_process_loop`/`create_plan`/`results_acceptable` functions. It owns a single `genai.Client` for the whole research session, and that client is now passed into `research_agent`, `fact_checking_agent`, and `synthesis_agent` instead of each one constructing its own client from an API key
+- Fixed `results_acceptable` not passing accumulated research history back into `create_plan` on re-plan, so the planner was re-planning with no memory of prior iterations
+- Replaced the `list[tuple[AgentType, str]]` research history with a `ResearchStep` dataclass (`research_step.py`) and a shared `research_history_to_text` helper (`research_utils.py`)
+- Fixed `synthesis_agent` passing the raw research history list directly as `input` to the model instead of a flattened string
+- Moved the `num_iterations` cap out of a hardcoded magic number into `MAX_RESEARCH_ITERATIONS` in `config.py`
+- Fixed `main.py` constructing an `Exception()` without raising it when `GEMINI_API_KEY` is missing
+- Updated README's file structure section to reflect the actual repo layout instead of the earlier aspirational one
+
+Added:
+- Retry/backoff wrapper (`retry.py`) around all `client.interactions.create` calls, retrying on HTTP 429 (rate limit) responses with exponential backoff
+
+## [0.1.4] - 2026-08-27
+Changed:
+- Adjusted the prompt to explicitly ask for steps for a given agent to perform
+
+Added:
+
 ## [0.1.3] - 2026-08-26
 Changed:
 - Fixed type hint for tool calls list in research_agent.py

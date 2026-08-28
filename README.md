@@ -66,39 +66,35 @@ Return result     Run agents
 ```
 root_dir/
 ├── pyproject.toml
+├── uv.lock
 ├── README.md
+├── CHANGELOG.md
+├── TODO.md
+├── config.py                       # Environment/configuration (GEMINI_API_KEY, MAX_RESEARCH_ITERATIONS)
 ├── .env
 ├── .gitignore
 │
 ├── src/
-│   └── agentic_news/
-│       ├── __init__.py
-│       │
-│       ├── main.py                 # FastAPI application entry point
-│       │
-│       ├── api/
-│       │   ├── __init__.py
-│       │   └── routes/
-│       │       ├── __init__.py
-│       │       └── agents.py       # API endpoints
-│       │
-│       ├── agents/
-│       │   ├── __init__.py
-│       │   ├── base.py             # Shared agent abstractions
-│       │   ├── research_agent.py
-│       │   └── ...
-│       │
-│       ├── services/
-│       │   ├── __init__.py
-│       │   └── ...                 # External APIs, DB, etc.
-│       │
-│       └── config.py               # Environment/configuration
+│   ├── __init__.py
+│   ├── main.py                     # Entry point
+│   │
+│   ├── agents/
+│   │   ├── __init__.py
+│   │   ├── agent_type_enum.py      # AgentType enum, tags each research step
+│   │   ├── research_step.py        # ResearchStep dataclass (agent_type + content)
+│   │   ├── research_utils.py       # Flattens ResearchStep history into model input
+│   │   ├── retry.py                # Rate-limit retry/backoff wrapper for API calls
+│   │   ├── research_orchestrator.py# ResearchOrchestrator: owns the shared client, runs the plan/research/fact-check/synthesize loop
+│   │   ├── research_agent.py
+│   │   ├── fact_checking_agent.py
+│   │   ├── synthesis_agent.py
+│   │   └── agent_tools/            # Custom tools for the research agent (planned, not yet implemented)
+│   │
+│   ├── api/
+│   │   └── __init__.py             # API routes (planned, not yet implemented)
+│   │
+│   └── services/
+│       └── __init__.py             # External APIs, DB, etc. (planned, not yet implemented)
 │
-└── tests/
-    ├── __init__.py
-    ├── api/
-    │   └── test_agents.py
-    ├── agents/
-    │   └── test_research_agent.py
-    └── conftest.py
+└── test/                           # Unit tests (planned, not yet implemented)
 ```
