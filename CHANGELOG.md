@@ -1,5 +1,12 @@
 # CHANGELOG
 
+## [0.1.7] - 2026-09-06
+Changed:
+- Fixed `fact_checking_agent` calling `client.interactions.create(user_content=...)` — not a real parameter on this SDK surface; changed to `input=...` like every other call site. Only surfaced once billing was enabled and the pipeline got past the research stage for the first time
+- Fixed `fact_checking_agent`'s model: `gemini-3.1-flash` does not exist (confirmed via a live `client.models.list()` call against the account) and returned a 404. Replaced with `gemini-3.6-flash`, verified live and priced the same as `gemini-3.7-flash` ($0.75/$3.75 per 1M tokens) while being newer/more capable than the (pricier, $1.50/$9.00) previous-gen `gemini-3.5-flash`
+- Fixed `retry.py`'s rate-limit retry never actually engaging: `client.interactions` raises through `google.genai._gaos.lib.compat_errors.RateLimitError`, not the `google.genai.errors.ClientError` hierarchy used by other client surfaces. `call_with_retry` now catches both
+- Confirmed via a real end-to-end run (~69.6k tokens, ~$0.06) that the `research_so_far` re-plan fix from 0.1.5 is working: `create_plan`'s input token count grows across loop iterations as prior research is fed back in
+
 ## [0.1.6] - 2026-08-27
 Added:
 - Per-stage token usage logging in `call_with_retry` (`retry.py`), so cost can be tracked per pipeline stage via the `usage` field on each interaction

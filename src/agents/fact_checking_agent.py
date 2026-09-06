@@ -14,8 +14,8 @@ def fact_checking_agent(client: genai.Client, research_results: str) -> str:
     """
     # create the research agent
     interaction = call_with_retry(lambda: client.interactions.create(
-        model="gemini-3.1-flash",
+        model="gemini-3.6-flash",
         system_instruction=_fact_checking_prompt,
-        user_content=research_results,
+        input=research_results,
     ), stage="fact_checking_agent")
     return interaction.output_text
