@@ -1,5 +1,12 @@
 # CHANGELOG
 
+## [0.1.8] - 2026-09-07
+Added:
+- Unit test suite in `test/`, covering every module in `src/agents/` plus `config.py`. Uses `unittest.mock`/`monkeypatch` to fake the google-genai `Interaction`/`Usage`/step objects (`test/conftest.py`) so tests run free and fast (~0.5s, no real API calls)
+- Regression tests pinning the bugs fixed in 0.1.5/0.1.7: `results_acceptable` threading `research_so_far` through to `create_plan`, `synthesis_agent` flattening research history to text, `fact_checking_agent` using `input=` (not `user_content=`) and a real model name, and `call_with_retry` catching the actual `RateLimitError` type raised by `client.interactions`
+- An `xfail`-marked test documenting the known-broken `_TOOLS[tool_call.name]` tool-dispatch bug in `research_agent.py`, so it surfaces as a build failure (XPASS) once that's actually fixed rather than staying silently broken
+- `[tool.pytest.ini_options]` in `pyproject.toml` pointing `testpaths` at `test/`
+
 ## [0.1.7] - 2026-09-06
 Changed:
 - Fixed `fact_checking_agent` calling `client.interactions.create(user_content=...)` — not a real parameter on this SDK surface; changed to `input=...` like every other call site. Only surfaced once billing was enabled and the pipeline got past the research stage for the first time
