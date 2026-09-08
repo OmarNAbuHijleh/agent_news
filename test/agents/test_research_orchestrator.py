@@ -4,6 +4,7 @@ import src.agents.research_orchestrator as orchestrator_module
 from src.agents.research_orchestrator import ResearchOrchestrator
 from src.agents.agent_type_enum import AgentType
 from src.agents.research_step import ResearchStep
+from src.agents.progress_event import ProgressEvent
 
 
 @pytest.fixture
@@ -137,3 +138,46 @@ def test_run_raises_once_max_iterations_exceeded(orchestrator, monkeypatch):
 
     with pytest.raises(Exception):
         orchestrator.run("what is nvidia stock price")
+
+
+# --- run_streaming ---
+
+def test_run_streaming_yields_expected_stage_sequence_for_one_satisfied_iteration(orchestrator, monkeypatch):
+    monkeypatch.setattr(orchestrator_module, "research_agent", MagicMock(return_value="research results"))
+    monkeypatch.setattr(orchestrator_module, "fact_checking_agent", MagicMock(return_value="fact check results"))
+    monkeypatch.setattr(orchestrator_module, "synthesis_agent", MagicMock(return_value="final summary"))
+    monkeypatch.setattr(orchestrator, "create_plan", MagicMock(return_value="a plan"))
+    monkeypatch.setattr(orchestrator, "results_acceptable", MagicMock(return_value=(False, "")))
+
+    events = list(orchestrator.run_streaming("what is nvidia stock price"))
+
+    assert [event.stage for event in events] == [
+        "planning", "plan", "researching", "research_result",
+        "fact_checking", "fact_check_result", "synthesizing", "final",
+    ]
+    assert events[-1] == ProgressEvent(stage="final", content="final summary", done=True)
+    assert all(not event.done for event in events[:-1])
+
+
+def test_run_streaming_yields_a_fresh_plan_event_on_replan(orchestrator, monkeypatch):
+    monkeypatch.setattr(orchestrator_module, "research_agent", MagicMock(return_value="research results"))
+    monkeypatch.setattr(orchestrator_module, "fact_checking_agent", MagicMock(return_value="fact check results"))
+    monkeypatch.setattr(orchestrator_module, "synthesis_agent", MagicMock(return_value="final summary"))
+    monkeypatch.setattr(orchestrator, "create_plan", MagicMock(return_value="a plan"))
+    monkeypatch.setattr(orchestrator, "results_acceptable", MagicMock(side_effect=[(True, "revised plan"), (False, "")]))
+
+    events = list(orchestrator.run_streaming("what is nvidia stock price"))
+
+    plan_events = [event for event in events if event.stage == "plan"]
+    assert [event.content for event in plan_events] == ["a plan", "revised plan"]
+
+
+def test_run_streaming_raises_once_max_iterations_exceeded(orchestrator, monkeypatch):
+    monkeypatch.setattr(orchestrator_module, "MAX_RESEARCH_ITERATIONS", 1)
+    monkeypatch.setattr(orchestrator_module, "research_agent", MagicMock(return_value="research results"))
+    monkeypatch.setattr(orchestrator_module, "fact_checking_agent", MagicMock(return_value="fact check results"))
+    monkeypatch.setattr(orchestrator, "create_plan", MagicMock(return_value="a plan"))
+    monkeypatch.setattr(orchestrator, "results_acceptable", MagicMock(return_value=(True, "a plan")))
+
+    with pytest.raises(Exception):
+        list(orchestrator.run_streaming("what is nvidia stock price"))

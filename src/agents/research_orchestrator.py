@@ -1,4 +1,5 @@
 # this will be where we have the LLM perform research planning. It will receive the user query and determine the steps it wants to take to perform the research
+from typing import Iterator
 from google import genai
 from .research_agent import research_agent
 from .fact_checking_agent import fact_checking_agent
@@ -6,6 +7,7 @@ from .synthesis_agent import synthesis_agent
 from .agent_type_enum import AgentType
 from .research_step import ResearchStep
 from .research_utils import research_history_to_text
+from .progress_event import ProgressEvent
 from .retry import call_with_retry
 from config import MAX_RESEARCH_ITERATIONS
 
@@ -75,18 +77,25 @@ class ResearchOrchestrator:
         else:
             raise Exception() # TODO: Check for cases where this is the result
 
-    def run(self, user_input_query: str) -> str:
-        """Runs when our API receives a user query. The user query will first be used to develop a plan, followed by a research agent run to answer the query. Following the research agent run, the results of the run are fact-checked by an agent and then the results are compiled and delivered by another agent when the language model determines the results are satisfactory.
+    def run_streaming(self, user_input_query: str) -> Iterator[ProgressEvent]:
+        """Same pipeline as run(), but yields a ProgressEvent after each stage completes instead
+        of only returning the final result. Lets a caller (e.g. the API layer) show a user
+        real progress instead of an unresponsive wait - a single pass here can take minutes.
         Args:
             user_input_query <str>: The query used to produce our research plan
-        Returns:
-            A string containing the synthesized results of our research.
+        Yields:
+            <ProgressEvent>: One event per completed stage; the last event has done=True and
+                carries the synthesized final result
         """
         # TODO: Add a path to see if we've properly researched the topic already and what other information we may or may not need. If we have not sufficiently researched this topic, we'll want to run the entire research agent pipeline
 
         research_contents: list[ResearchStep] = [] # This will be used to track our research process to see what we've already done and the results
         research_not_completed: bool = True
+
+        yield ProgressEvent(stage="planning", content="Creating a research plan...")
         research_plan: str = self.create_plan(user_input_query)
+        yield ProgressEvent(stage="plan", content=research_plan)
+
         num_iterations: int = 0
         while research_not_completed:
             # we've hit our max number of iterations and will no longer answer this query
@@ -95,12 +104,34 @@ class ResearchOrchestrator:
 
             research_contents.append(ResearchStep(AgentType.RESEARCH_PLANNER, research_plan))
             # run the research process
+            yield ProgressEvent(stage="researching", content=f"Researching (iteration {num_iterations + 1})...")
             research_results = research_agent(self._client, research_plan)
             research_contents.append(ResearchStep(AgentType.RESEARCHER, research_results))
+            yield ProgressEvent(stage="research_result", content=research_results)
+
+            yield ProgressEvent(stage="fact_checking", content="Fact-checking the research...")
             fact_checking_results = fact_checking_agent(self._client, research_results)
             research_contents.append(ResearchStep(AgentType.FACT_CHECKING, fact_checking_results))
+            yield ProgressEvent(stage="fact_check_result", content=fact_checking_results)
 
             research_not_completed, research_plan = self.results_acceptable(research_results, fact_checking_results, user_input_query, research_contents) #this will determine if the results are acceptable and research is completed. If it is not, create a new research plan and then the cycle will continue
             num_iterations += 1
+            if research_not_completed:
+                yield ProgressEvent(stage="plan", content=research_plan)
 
-        return synthesis_agent(self._client, research_contents)
+        yield ProgressEvent(stage="synthesizing", content="Synthesizing the final report...")
+        final_result = synthesis_agent(self._client, research_contents)
+        yield ProgressEvent(stage="final", content=final_result, done=True)
+
+    def run(self, user_input_query: str) -> str:
+        """Runs when our API receives a user query. The user query will first be used to develop a plan, followed by a research agent run to answer the query. Following the research agent run, the results of the run are fact-checked by an agent and then the results are compiled and delivered by another agent when the language model determines the results are satisfactory.
+        Args:
+            user_input_query <str>: The query used to produce our research plan
+        Returns:
+            A string containing the synthesized results of our research.
+        """
+        final_result = ""
+        for event in self.run_streaming(user_input_query):
+            if event.done:
+                final_result = event.content
+        return final_result
