@@ -1,5 +1,13 @@
 # CHANGELOG
 
+## [0.1.10] - 2026-09-08
+Added:
+- `src/services/query_cache_base.py`: `QueryCacheBackend`, a `typing.Protocol` formalizing the get/set/close interface shared by every cache backend, so `CachedResearchService` can swap backends without other code changing
+- `src/services/cloud_query_cache.py`: `DynamoDBQueryCache`, a DynamoDB-backed drop-in replacement for the local SQLite `QueryCache`, per the README's original cost-saving architecture. **Dead code - not wired into `CachedResearchService` yet**; see that file's docstring for activation steps
+- `boto3` added as an optional `cloud` dependency group (`pip install .[cloud]`), not part of the default install since the DynamoDB backend isn't active
+- `CACHE_DYNAMODB_TABLE_NAME` and `CACHE_AWS_REGION` config values (unused until the cloud backend is activated)
+- Unit tests for `DynamoDBQueryCache`, fully mocking `boto3.resource` - no real AWS calls or credentials needed
+
 ## [0.1.9] - 2026-09-08
 Added:
 - `src/services/query_normalizer.py`: LLM call (gemini-3.1-flash-lite) that canonicalizes a raw query into a cache key, catching paraphrases like "how's NVDA doing" vs "nvidia stock price"

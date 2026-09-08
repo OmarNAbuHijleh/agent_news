@@ -7,4 +7,4 @@ This document functions as a tracker for open items that need implementation.
 - Unit tests for `src/api/` once it's built
 - API development (versioning, middleware, logging)
 - Frontend development
-- Query cache is currently a local SQLite file (`query_cache.sqlite3`); move to a hosted store (DynamoDB/ElastiCache per the README's original architecture) once there's an actual deployment to share it across
+- Query cache is currently a local SQLite file (`query_cache.sqlite3`). A DynamoDB-backed drop-in replacement exists at `src/services/cloud_query_cache.py` (`DynamoDBQueryCache`) but is dead code - not wired into `CachedResearchService` yet. Activate it once there's an actual deployment to share the cache across: provision the DynamoDB table (see that file's docstring), `pip install .[cloud]`, and swap `QueryCache()` for `DynamoDBQueryCache(...)` in `CachedResearchService.__init__`

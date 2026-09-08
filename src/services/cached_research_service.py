@@ -18,6 +18,10 @@ class CachedResearchService:
     def __init__(self, api_key: str):
         self._client = genai.Client(api_key=api_key)
         self._orchestrator = ResearchOrchestrator(client=self._client)
+        # Local SQLite cache for now. A DynamoDB-backed drop-in replacement exists at
+        # cloud_query_cache.DynamoDBQueryCache (same get/set/close interface, currently unused/
+        # dead code) - swap it in here once there's an actual deployment to share the cache
+        # across.
         self._cache = QueryCache()
 
     def run(self, user_input_query: str) -> str:
