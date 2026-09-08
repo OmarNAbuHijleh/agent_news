@@ -11,6 +11,19 @@ def orchestrator():
     return ResearchOrchestrator(api_key="fake-key")
 
 
+# --- __init__ ---
+
+def test_init_accepts_a_pre_built_client_instead_of_api_key():
+    fake_client = MagicMock()
+    orchestrator = ResearchOrchestrator(client=fake_client)
+    assert orchestrator._client is fake_client
+
+
+def test_init_requires_either_api_key_or_client():
+    with pytest.raises(ValueError):
+        ResearchOrchestrator()
+
+
 # --- create_plan ---
 
 def test_create_plan_without_history_uses_query_as_input(orchestrator, make_interaction):

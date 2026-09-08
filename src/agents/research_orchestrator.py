@@ -26,8 +26,12 @@ class ResearchOrchestrator:
     per user/session instead of spinning up a new client on every agent call.
     """
 
-    def __init__(self, api_key: str):
-        self._client = genai.Client(api_key=api_key)
+    def __init__(self, api_key: str | None = None, client: genai.Client | None = None):
+        if client is None:
+            if api_key is None:
+                raise ValueError("ResearchOrchestrator requires either api_key or client")
+            client = genai.Client(api_key=api_key)
+        self._client = client
 
     def create_plan(self, user_input_query: str, research_so_far: list[ResearchStep] | None = None) -> str:
         """Given a user input query, a research plan will be created. Following the creation of the plan, the plan will be executed in a loop until the plan is deemed completed by the planner.

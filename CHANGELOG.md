@@ -1,5 +1,18 @@
 # CHANGELOG
 
+## [0.1.9] - 2026-09-08
+Added:
+- `src/services/query_normalizer.py`: LLM call (gemini-3.1-flash-lite) that canonicalizes a raw query into a cache key, catching paraphrases like "how's NVDA doing" vs "nvidia stock price"
+- `src/services/query_cache.py`: SQLite-backed cache of research results keyed by normalized query, with a configurable TTL (`CACHE_TTL_SECONDS`, default 1 week - news/market context doesn't shift meaningfully over a few days) so stale results don't get served indefinitely
+- `src/services/cached_research_service.py`: `CachedResearchService`, wiring normalizer + cache + `ResearchOrchestrator` together per the README's cost-saving architecture (normalize -> check cache -> hit returns cached result, miss runs the full agent pipeline and caches it)
+- `CACHE_DB_PATH` and `CACHE_TTL_SECONDS` config values; `*.sqlite3` added to `.gitignore`
+- Unit tests for all three new modules (`test/services/`)
+
+Changed:
+- `ResearchOrchestrator.__init__` now accepts an optional pre-built `client` in addition to `api_key`, so `CachedResearchService` can share one `genai.Client` between the normalizer and the orchestrator instead of constructing two
+- `main.py` now goes through `CachedResearchService` instead of calling `ResearchOrchestrator` directly
+- README's file structure diagram updated to match reality (`services/` no longer a placeholder, `test/` no longer marked "not yet implemented")
+
 ## [0.1.8] - 2026-09-07
 Added:
 - Unit test suite in `test/`, covering every module in `src/agents/` plus `config.py`. Uses `unittest.mock`/`monkeypatch` to fake the google-genai `Interaction`/`Usage`/step objects (`test/conftest.py`) so tests run free and fast (~0.5s, no real API calls)

@@ -33,7 +33,7 @@ Chain of thought will be exposed and visible for all to see. Therefore, users ca
 
 
 ### Cost Saving
-I'm not made of money, so I'd like to keep as much of what I have as possible. I'm going to follow this architecture so that I can cache the redundant searches:
+I'm not made of money, so I'd like to keep as much of what I have as possible. I'm following this architecture so that I can cache the redundant searches (implemented in `src/services/`, currently backed by a local SQLite file rather than a hosted DB - see file structure above):
 ```text
 User
   │
@@ -70,9 +70,10 @@ root_dir/
 ├── README.md
 ├── CHANGELOG.md
 ├── TODO.md
-├── config.py                       # Environment/configuration (GEMINI_API_KEY, MAX_RESEARCH_ITERATIONS)
+├── config.py                       # Environment/configuration (GEMINI_API_KEY, MAX_RESEARCH_ITERATIONS, CACHE_DB_PATH, CACHE_TTL_SECONDS)
 ├── .env
 ├── .gitignore
+├── query_cache.sqlite3             # Local query-result cache (gitignored, created on first run)
 │
 ├── src/
 │   ├── __init__.py
@@ -94,7 +95,10 @@ root_dir/
 │   │   └── __init__.py             # API routes (planned, not yet implemented)
 │   │
 │   └── services/
-│       └── __init__.py             # External APIs, DB, etc. (planned, not yet implemented)
+│       ├── __init__.py
+│       ├── query_normalizer.py     # LLM call that canonicalizes a raw query into a cache key
+│       ├── query_cache.py          # SQLite-backed cache of research results, keyed by normalized query
+│       └── cached_research_service.py  # Wires normalizer + cache + ResearchOrchestrator together (the cost-saving architecture below)
 │
-└── test/                           # Unit tests (planned, not yet implemented)
+└── test/                           # Unit tests, mirroring src/ (mocks the google-genai client - no real API calls)
 ```
