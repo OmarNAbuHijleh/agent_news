@@ -16,20 +16,13 @@ This repository contains the code for a news research agent. Given a topic, it w
 4. Synthesis Agent (Produces the final report)
 
 ### Under the Hood
-Chain of thought will be exposed and visible for all to see. Therefore, users can see:
-- tool calls
-- searches 
-- sources selected
-- evidences 
-- agent decisions
-- confidence
-- execution time
+Chain of thought is exposed and visible for all to see - the frontend streams each stage (plan, research findings, fact-check, final report) to the user as it completes rather than showing only the finished report. Still to fully expose: individual tool calls/searches within a stage, per-claim confidence, and execution time.
 
 ### Tools I intent to use:
 - python and its accompanying libraries (see "pyproject.toml")
-- AWS lambda (for API), DynamoDB/ElastiCache, Cloudwatch
-- LLM API (provider tbd)
-- search/news API
+- AWS lambda (for API), DynamoDB/ElastiCache, Cloudwatch - not deployed yet; the API currently runs locally via FastAPI/uvicorn (`python -m src.api.app`)
+- LLM API: Google Gemini (`google-genai`)
+- search/news API - not yet; research currently relies on Gemini's built-in `google_search`/`url_context` tools
 
 
 ### Cost Saving
@@ -75,24 +68,31 @@ root_dir/
 ├── .gitignore
 ├── query_cache.sqlite3             # Local query-result cache (gitignored, created on first run)
 │
+├── frontend/                       # Static single-page UI (no build step) - served by src/api/app.py
+│   ├── index.html
+│   ├── style.css
+│   └── app.js                      # Reads the /api/research SSE stream and renders each stage as it arrives
+│
 ├── src/
 │   ├── __init__.py
-│   ├── main.py                     # Entry point
+│   ├── main.py                     # CLI entry point (blocking, prints the final result only)
 │   │
 │   ├── agents/
 │   │   ├── __init__.py
 │   │   ├── agent_type_enum.py      # AgentType enum, tags each research step
 │   │   ├── research_step.py        # ResearchStep dataclass (agent_type + content)
 │   │   ├── research_utils.py       # Flattens ResearchStep history into model input
+│   │   ├── progress_event.py       # ProgressEvent dataclass (stage, content, done) for streaming
 │   │   ├── retry.py                # Rate-limit retry/backoff wrapper for API calls
-│   │   ├── research_orchestrator.py# ResearchOrchestrator: owns the shared client, runs the plan/research/fact-check/synthesize loop
+│   │   ├── research_orchestrator.py# ResearchOrchestrator: owns the shared client; run_streaming() yields ProgressEvents, run() wraps it and returns just the final result
 │   │   ├── research_agent.py
 │   │   ├── fact_checking_agent.py
 │   │   ├── synthesis_agent.py
 │   │   └── agent_tools/            # Custom tools for the research agent (planned, not yet implemented)
 │   │
 │   ├── api/
-│   │   └── __init__.py             # API routes (planned, not yet implemented)
+│   │   ├── __init__.py
+│   │   └── app.py                  # FastAPI app: POST /api/research streams ProgressEvents as SSE; also serves frontend/. Run with `python -m src.api.app`
 │   │
 │   └── services/
 │       ├── __init__.py
@@ -100,7 +100,7 @@ root_dir/
 │       ├── query_cache_base.py     # QueryCacheBackend protocol shared by every cache backend
 │       ├── query_cache.py          # SQLite-backed cache of research results, keyed by normalized query (active)
 │       ├── cloud_query_cache.py    # DynamoDB-backed cache, same interface (DEAD CODE - not wired in yet, see docstring)
-│       └── cached_research_service.py  # Wires normalizer + cache + ResearchOrchestrator together (the cost-saving architecture below)
+│       └── cached_research_service.py  # Wires normalizer + cache + ResearchOrchestrator together; run_streaming() drives the API, run() drives main.py
 │
-└── test/                           # Unit tests, mirroring src/ (mocks the google-genai client - no real API calls)
+└── test/                           # Unit tests, mirroring src/ (mocks the google-genai client and FastAPI's TestClient - no real API calls)
 ```

@@ -1,8 +1,10 @@
 import logging
+from typing import Iterator
 from google import genai
 from .query_cache import QueryCache
 from .query_normalizer import normalize_query
 from ..agents.research_orchestrator import ResearchOrchestrator
+from ..agents.progress_event import ProgressEvent
 
 logger = logging.getLogger(__name__)
 
@@ -24,6 +26,31 @@ class CachedResearchService:
         # across.
         self._cache = QueryCache()
 
+    def run_streaming(self, user_input_query: str) -> Iterator[ProgressEvent]:
+        """Given a user query, yields a single done=True event with the cached result on a
+        cache hit, otherwise streams the full research pipeline's progress and caches the
+        final result once it's ready.
+        Args:
+            user_input_query <str>: The user's original query
+        Yields:
+            <ProgressEvent>: Progress updates, ending with a done=True event carrying the result
+        """
+        normalized_query = normalize_query(self._client, user_input_query)
+
+        cached_result = self._cache.get(normalized_query)
+        if cached_result is not None:
+            logger.info("cache hit for normalized query: %r", normalized_query)
+            yield ProgressEvent(stage="cache_hit", content=cached_result, done=True)
+            return
+
+        logger.info("cache miss for normalized query: %r", normalized_query)
+        final_result = ""
+        for event in self._orchestrator.run_streaming(user_input_query):
+            yield event
+            if event.done:
+                final_result = event.content
+        self._cache.set(normalized_query, final_result)
+
     def run(self, user_input_query: str) -> str:
         """Given a user query, returns a cached result if one exists and hasn't expired,
         otherwise runs the full research pipeline and caches the result.
@@ -32,14 +59,8 @@ class CachedResearchService:
         Returns:
             <str>: The (possibly cached) synthesized research result
         """
-        normalized_query = normalize_query(self._client, user_input_query)
-
-        cached_result = self._cache.get(normalized_query)
-        if cached_result is not None:
-            logger.info("cache hit for normalized query: %r", normalized_query)
-            return cached_result
-
-        logger.info("cache miss for normalized query: %r", normalized_query)
-        result = self._orchestrator.run(user_input_query)
-        self._cache.set(normalized_query, result)
-        return result
+        final_result = ""
+        for event in self.run_streaming(user_input_query):
+            if event.done:
+                final_result = event.content
+        return final_result

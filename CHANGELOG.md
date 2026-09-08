@@ -1,5 +1,19 @@
 # CHANGELOG
 
+## [0.1.11] - 2026-09-08
+Added:
+- `src/agents/progress_event.py`: `ProgressEvent` dataclass (stage, content, done) for streaming pipeline progress
+- `ResearchOrchestrator.run_streaming()` and `CachedResearchService.run_streaming()`: generator versions of `run()` that yield a `ProgressEvent` after each stage (planning, plan, researching, research_result, fact_checking, fact_check_result, synthesizing, final/cache_hit) instead of only returning the finished result. `run()` on both is now a thin wrapper that consumes the stream and returns the final event's content, so existing callers are unaffected
+- `src/api/app.py`: FastAPI app with `POST /api/research`, streaming progress as Server-Sent Events (`text/event-stream`) via `StreamingResponse`; also serves the static frontend at `/`. Run with `python -m src.api.app`
+- `frontend/`: a single static page (`index.html`/`style.css`/`app.js`, no build step) - a chat-style UI that reads the SSE stream via `fetch()` + a `ReadableStream` reader and renders each stage as it arrives, so the user sees the plan/research/fact-check as they happen instead of waiting silently. This also happens to be exactly the README's "expose the chain of thought" goal
+- `uvicorn` added as a dependency to run the API
+- Unit tests for `run_streaming` on both classes, `ProgressEvent`, and the API endpoint (via FastAPI's `TestClient`, fully mocked - no real API calls)
+
+Changed:
+- README/TODO updated: frontend and API items are no longer open ("planned, not yet implemented" removed); TODO now tracks the remaining hardening work (versioning, auth/rate-limiting, real cloud deployment) instead
+
+Verified live: streamed a fresh (cache-miss) query end-to-end through the real HTTP server and confirmed events arrive with real, growing time gaps (1.7s / 4.4s / 14.8s / ... / 80.4s) rather than all at once at the end - the streaming is genuine, not just structurally present.
+
 ## [0.1.10] - 2026-09-08
 Added:
 - `src/services/query_cache_base.py`: `QueryCacheBackend`, a `typing.Protocol` formalizing the get/set/close interface shared by every cache backend, so `CachedResearchService` can swap backends without other code changing

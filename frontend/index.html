@@ -1,0 +1,30 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Agentic News Research</title>
+  <link rel="stylesheet" href="/style.css">
+</head>
+<body>
+  <header>
+    <h1>Agentic News Research</h1>
+    <p class="subtitle">Ask about a topic. You'll see the plan, research, and fact-checking as they happen, not just the final answer.</p>
+  </header>
+
+  <main id="transcript" aria-live="polite"></main>
+
+  <form id="query-form">
+    <input
+      id="query-input"
+      type="text"
+      placeholder="e.g. Nvidia stock price"
+      autocomplete="off"
+      required
+    >
+    <button id="send-button" type="submit">Send</button>
+  </form>
+
+  <script src="/app.js"></script>
+</body>
+</html>
