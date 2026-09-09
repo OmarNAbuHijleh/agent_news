@@ -13,11 +13,13 @@ const STAGE_META = {
 const transcript = document.getElementById("transcript");
 const form = document.getElementById("query-form");
 const input = document.getElementById("query-input");
-const button = document.getElementById("send-button");
+const statusBanner = document.getElementById("status-banner");
 
-function setFormEnabled(enabled) {
-  input.disabled = !enabled;
-  button.disabled = !enabled;
+function setBusy(isBusy) {
+  // While busy, the search bar is replaced entirely by the status banner (not just disabled),
+  // so it's unmistakable that no other query can be started until this one finishes.
+  form.hidden = isBusy;
+  statusBanner.hidden = !isBusy;
 }
 
 function appendMessage(kind, label, content) {
@@ -84,7 +86,7 @@ async function streamResearch(query) {
   } catch (err) {
     appendMessage("error", "Error", `Something went wrong: ${err.message}`);
   } finally {
-    setFormEnabled(true);
+    setBusy(false);
     input.focus();
   }
 }
@@ -96,6 +98,6 @@ form.addEventListener("submit", (event) => {
 
   appendMessage("user", "You", query);
   input.value = "";
-  setFormEnabled(false);
+  setBusy(true);
   streamResearch(query);
 });

@@ -140,6 +140,23 @@ header h1 {
   border-top: 1px solid var(--border);
 }
 
+#status-banner {
+  padding: 1rem 1.5rem;
+  border-top: 1px solid var(--border);
+}
+
+#status-banner button {
+  width: 100%;
+  padding: 0.7rem 1rem;
+  border-radius: 0.5rem;
+  border: 1px dashed var(--border);
+  background: transparent;
+  color: var(--muted);
+  font-size: 0.9rem;
+  font-style: italic;
+  cursor: not-allowed;
+}
+
 #query-input {
   flex: 1;
   padding: 0.6rem 0.8rem;

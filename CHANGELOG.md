@@ -1,5 +1,11 @@
 # CHANGELOG
 
+## [0.1.13] - 2026-09-09
+Added:
+- While a query is streaming, the search bar is now replaced entirely (not just disabled) by a status banner: "Query is being performed. No other actions can be performed until it is complete. Search bar will return once the query is complete." It reverts to the search bar once the stream finishes (success or error). `frontend/app.js`'s `setBusy()` toggles `form.hidden`/`status-banner.hidden`; both elements already existed as siblings, so no layout restructuring was needed.
+
+Frontend-only change - no backend/API modifications.
+
 ## [0.1.12] - 2026-09-09
 Added:
 - API versioning: the research endpoint moved to `POST /api/v1/research` (was `/api/research`), now defined in its own router (`src/api/routes/research.py`) instead of directly on `app.py`
