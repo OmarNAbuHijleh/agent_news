@@ -47,7 +47,7 @@ Return result     Run agents
 
 ## Features
 - Trending Investigations: This is going to be a page that tracks what is currently trending and will fire an update for those topics occasionally.
-- Ask the Investigation: Following the synthesizing of a report, we'll give users the ability to ask follow up questions and discuss the results.
+- Ask the Investigation (implemented): Following the synthesizing of a report, users can ask follow-up questions grounded in the full evidence gathered during that investigation (not just the final summary). Once an investigation completes, the search bar switches into follow-up mode and hits `POST /api/v1/ask`, a single call grounded in the plan/research/fact-checking accumulated client-side; a "New Investigation" button resets back to normal search. Currently keeps evidence client-side per session rather than as a persisted, revisitable investigation - see TODO.md.
   - For example:
     1. User: "Why does the report say NVIDIA's position is strengthening?"
     2. The system performs RAG over the investigation's evidence and responds: "The conclusion is primarily based on sources A, B and C..."
@@ -71,7 +71,7 @@ root_dir/
 ├── frontend/                       # Static single-page UI (no build step) - served by src/api/app.py
 │   ├── index.html
 │   ├── style.css
-│   └── app.js                      # Reads the /api/v1/research SSE stream and renders each stage as it arrives
+│   └── app.js                      # Streams /api/v1/research and renders each stage; once done, switches the search bar into follow-up mode (POST /api/v1/ask) until "New Investigation" resets it
 │
 ├── src/
 │   ├── __init__.py
@@ -88,16 +88,18 @@ root_dir/
 │   │   ├── research_agent.py
 │   │   ├── fact_checking_agent.py
 │   │   ├── synthesis_agent.py
+│   │   ├── investigation_qa_agent.py  # Answers a follow-up question, grounded in the full investigation evidence ("Ask the Investigation")
 │   │   └── agent_tools/            # Custom tools for the research agent (planned, not yet implemented)
 │   │
 │   ├── api/
 │   │   ├── __init__.py
-│   │   ├── app.py                  # FastAPI app: wires up the router, rate limiter, and request logging; serves frontend/. Run with `python -m src.api.app`
-│   │   ├── rate_limiter.py         # slowapi Limiter + the research endpoint's rate limit (RATE_LIMIT_MAX_REQUESTS/_WINDOW_SECONDS)
+│   │   ├── app.py                  # FastAPI app: wires up the routers, rate limiter, and request logging; serves frontend/. Run with `python -m src.api.app`
+│   │   ├── rate_limiter.py         # slowapi Limiter + the shared rate limit (RATE_LIMIT_MAX_REQUESTS/_WINDOW_SECONDS)
 │   │   ├── request_logging_middleware.py  # Raw ASGI middleware logging method/path/status/duration per request (streaming-safe)
 │   │   └── routes/
 │   │       ├── __init__.py
-│   │       └── research.py         # POST /api/v1/research - streams ProgressEvents as SSE
+│   │       ├── research.py         # POST /api/v1/research - streams ProgressEvents as SSE
+│   │       └── ask.py              # POST /api/v1/ask - single grounded follow-up answer (blocking JSON, not streamed)
 │   │
 │   └── services/
 │       ├── __init__.py
