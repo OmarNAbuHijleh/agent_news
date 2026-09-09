@@ -58,7 +58,7 @@ function handleRawSseMessage(rawMessage) {
 async function streamResearch(query) {
   let buffer = "";
   try {
-    const response = await fetch("/api/research", {
+    const response = await fetch("/api/v1/research", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ query }),

@@ -15,3 +15,8 @@ CACHE_TTL_SECONDS: int = int(os.getenv("CACHE_TTL_SECONDS", str(7 * 24 * 60 * 60
 # actually wired up in place of the local SQLite QueryCache.
 CACHE_DYNAMODB_TABLE_NAME: str = os.getenv("CACHE_DYNAMODB_TABLE_NAME", "agentic-news-query-cache")
 CACHE_AWS_REGION: str | None = os.getenv("CACHE_AWS_REGION")
+
+# Per-client-IP rate limit on the /api/v1/research endpoint - each request can trigger a
+# multi-minute, real-money research pipeline run, so this exists to stop accidental/abusive loops.
+RATE_LIMIT_MAX_REQUESTS: int = int(os.getenv("RATE_LIMIT_MAX_REQUESTS", "5"))
+RATE_LIMIT_WINDOW_SECONDS: float = float(os.getenv("RATE_LIMIT_WINDOW_SECONDS", "60"))
