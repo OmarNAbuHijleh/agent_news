@@ -71,7 +71,7 @@ root_dir/
 ├── frontend/                       # Static single-page UI (no build step) - served by src/api/app.py
 │   ├── index.html
 │   ├── style.css
-│   └── app.js                      # Reads the /api/research SSE stream and renders each stage as it arrives
+│   └── app.js                      # Reads the /api/v1/research SSE stream and renders each stage as it arrives
 │
 ├── src/
 │   ├── __init__.py
@@ -92,7 +92,12 @@ root_dir/
 │   │
 │   ├── api/
 │   │   ├── __init__.py
-│   │   └── app.py                  # FastAPI app: POST /api/research streams ProgressEvents as SSE; also serves frontend/. Run with `python -m src.api.app`
+│   │   ├── app.py                  # FastAPI app: wires up the router, rate limiter, and request logging; serves frontend/. Run with `python -m src.api.app`
+│   │   ├── rate_limiter.py         # slowapi Limiter + the research endpoint's rate limit (RATE_LIMIT_MAX_REQUESTS/_WINDOW_SECONDS)
+│   │   ├── request_logging_middleware.py  # Raw ASGI middleware logging method/path/status/duration per request (streaming-safe)
+│   │   └── routes/
+│   │       ├── __init__.py
+│   │       └── research.py         # POST /api/v1/research - streams ProgressEvents as SSE
 │   │
 │   └── services/
 │       ├── __init__.py

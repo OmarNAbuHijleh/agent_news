@@ -1,5 +1,19 @@
 # CHANGELOG
 
+## [0.1.12] - 2026-09-09
+Added:
+- API versioning: the research endpoint moved to `POST /api/v1/research` (was `/api/research`), now defined in its own router (`src/api/routes/research.py`) instead of directly on `app.py`
+- Rate limiting on the research endpoint via `slowapi` (5 requests/60s per client IP by default, `RATE_LIMIT_MAX_REQUESTS`/`RATE_LIMIT_WINDOW_SECONDS` in config) - each request can trigger a multi-minute, real-money pipeline run, so this guards against accidental/abusive loops
+- Structured request logging (`src/api/request_logging_middleware.py`): logs `method`/`path`/`status`/`duration_ms` for every request. Implemented as raw ASGI middleware rather than Starlette's `BaseHTTPMiddleware`, which is known to buffer response bodies and would have broken true streaming - duration is measured through to the final chunk, not just time-to-first-byte
+- Unit tests for the rate limiter (via a dedicated 429 test) and the logging middleware (simulated ASGI scope/receive/send, confirming both single- and multi-chunk streaming responses pass through byte-for-byte unchanged)
+
+Changed:
+- `frontend/app.js` now calls `/api/v1/research`
+
+Verified live: fired repeated requests against the real server and confirmed exactly 5 succeed before a 6th gets a 429, and every request (successful or blocked) produces a log line with accurate status/duration.
+
+Still open: no auth on the API (anyone who can reach the server can trigger a paid research run) - see TODO.md.
+
 ## [0.1.11] - 2026-09-08
 Added:
 - `src/agents/progress_event.py`: `ProgressEvent` dataclass (stage, content, done) for streaming pipeline progress
