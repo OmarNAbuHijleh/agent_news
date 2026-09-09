@@ -1,5 +1,15 @@
 # CHANGELOG
 
+## [0.1.14] - 2026-09-09
+Added:
+- "Ask the Investigation" (README feature, now implemented): `src/agents/investigation_qa_agent.py` answers a follow-up question grounded in the full investigation evidence (plan/research/fact-checking across every iteration, not just the final summary). New `POST /api/v1/ask` endpoint (`src/api/routes/ask.py`) - a single blocking JSON call, not streamed, since there's only one LLM call rather than a multi-stage pipeline
+- Frontend: once an investigation completes, the search bar switches into follow-up mode (placeholder/subtitle change, Enter now calls `/ask` instead of `/research`) and a "New Investigation" button appears to reset back to fresh-query mode. Chose one context-aware input + a separate reset button over two buttons sharing one input, to avoid ambiguity about which button a typed question submits to
+- Unit tests for the new agent and endpoint (rate limiting, validation, and correct context/question passthrough)
+
+Verified live: ran a real cached research query, accumulated its evidence client-side, then asked a grounded follow-up ("What is the gross margin and why is it that high?") - the answer cited the exact figures and reasoning from that evidence rather than generic knowledge, confirming real grounding, not just plumbing.
+
+Known limitation (see TODO.md): investigation evidence lives only in a JS variable for the current browser session - no server-side persistence yet, so a reload loses it and past investigations can't be revisited.
+
 ## [0.1.13] - 2026-09-09
 Added:
 - While a query is streaming, the search bar is now replaced entirely (not just disabled) by a status banner: "Query is being performed. No other actions can be performed until it is complete. Search bar will return once the query is complete." It reverts to the search bar once the stream finishes (success or error). `frontend/app.js`'s `setBusy()` toggles `form.hidden`/`status-banner.hidden`; both elements already existed as siblings, so no layout restructuring was needed.

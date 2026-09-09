@@ -49,9 +49,27 @@ header {
   border-bottom: 1px solid var(--border);
 }
 
+.header-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+}
+
 header h1 {
   margin: 0 0 0.25rem;
   font-size: 1.25rem;
+}
+
+#new-investigation-button {
+  padding: 0.4rem 0.8rem;
+  border-radius: 0.5rem;
+  border: 1px solid var(--border);
+  background: transparent;
+  color: var(--fg);
+  font-size: 0.8rem;
+  cursor: pointer;
+  white-space: nowrap;
 }
 
 .subtitle {
