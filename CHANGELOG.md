@@ -1,5 +1,12 @@
 # CHANGELOG
 
+## [0.1.15] - 2026-09-11
+Added:
+- CORS support via FastAPI's `CORSMiddleware` in `src/api/app.py`, driven by a new `CORS_ALLOWED_ORIGINS` config value (comma-separated). Inert by default (empty list) since the frontend and API are same-origin today; only matters once the frontend is ever served from a different origin. Added as the outermost middleware layer (after `RequestLoggingMiddleware`) so it can short-circuit preflight `OPTIONS` requests before the rate limiter or routes run, and so its headers land on every response including 429s
+- Unit tests covering the default (no headers), a configured single/multiple origins, an unconfigured origin being rejected, and a real preflight request - using the same config-reload pattern as `test_config.py`, since the origins list is baked into the middleware at import time
+
+Verified live: without `CORS_ALLOWED_ORIGINS` set, a preflight request gets 400 with no CORS headers; with it set to a specific origin, the same preflight succeeds and echoes that origin back.
+
 ## [0.1.14] - 2026-09-09
 Added:
 - "Ask the Investigation" (README feature, now implemented): `src/agents/investigation_qa_agent.py` answers a follow-up question grounded in the full investigation evidence (plan/research/fact-checking across every iteration, not just the final summary). New `POST /api/v1/ask` endpoint (`src/api/routes/ask.py`) - a single blocking JSON call, not streamed, since there's only one LLM call rather than a multi-stage pipeline

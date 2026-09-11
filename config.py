@@ -20,3 +20,9 @@ CACHE_AWS_REGION: str | None = os.getenv("CACHE_AWS_REGION")
 # multi-minute, real-money research pipeline run, so this exists to stop accidental/abusive loops.
 RATE_LIMIT_MAX_REQUESTS: int = int(os.getenv("RATE_LIMIT_MAX_REQUESTS", "5"))
 RATE_LIMIT_WINDOW_SECONDS: float = float(os.getenv("RATE_LIMIT_WINDOW_SECONDS", "60"))
+
+# Origins allowed to call the API cross-origin (comma-separated), e.g. "https://my-frontend.com".
+# Empty by default - today's frontend is served from the same origin as the API, so no
+# cross-origin JS needs to read its responses. Set this only once the frontend is ever served
+# from a different origin than the API (see TODO.md).
+CORS_ALLOWED_ORIGINS: list[str] = [origin.strip() for origin in os.getenv("CORS_ALLOWED_ORIGINS", "").split(",") if origin.strip()]
