@@ -93,7 +93,7 @@ root_dir/
 │   │
 │   ├── api/
 │   │   ├── __init__.py
-│   │   ├── app.py                  # FastAPI app: wires up the routers, rate limiter, and request logging; serves frontend/. Run with `python -m src.api.app`
+│   │   ├── app.py                  # FastAPI app: wires up the routers, rate limiter, request logging, and CORS; serves frontend/. Run with `python -m src.api.app`
 │   │   ├── rate_limiter.py         # slowapi Limiter + the shared rate limit (RATE_LIMIT_MAX_REQUESTS/_WINDOW_SECONDS)
 │   │   ├── request_logging_middleware.py  # Raw ASGI middleware logging method/path/status/duration per request (streaming-safe)
 │   │   └── routes/
