@@ -1,5 +1,15 @@
 # CHANGELOG
 
+## [0.1.16] - 2026-09-12
+Added:
+- "Trending Investigations" (README feature, now implemented - scoped down per discussion): `src/services/trending_topics.py`'s `TrendingTopics` tracks how often each normalized query is asked (regardless of cache hit/miss), backed by its own table in the same SQLite file as the query cache. New `GET /api/v1/trending` endpoint (not rate-limited - it's a cheap local read, no LLM call)
+- `CachedResearchService` now calls `TrendingTopics.record_query()` on every query, so popularity tracking rides on the same normalization already used for caching (confirmed live: "nvidia stock price" and "Nvidia Stock Price" collapsed into the same trending entry)
+- Frontend: a "Trending" section above the search bar with clickable topic chips; clicking one always starts a fresh investigation (resetting out of follow-up mode first if needed). Hidden while busy or when there are no topics yet. Refreshes after each fresh research run completes
+- `TRENDING_TOPICS_LIMIT` config value (default 5)
+- Unit tests for `TrendingTopics`, the new endpoint, and `CachedResearchService`'s trending-recording behavior
+
+Scoped down from the README's original description, per explicit discussion: this is a section on the existing page (not a separate page), topics come from this app's own query history rather than an external trends source, and there's no periodic background refresh - trending topics are just clickable suggestions through the normal on-demand pipeline.
+
 ## [0.1.15] - 2026-09-11
 Added:
 - CORS support via FastAPI's `CORSMiddleware` in `src/api/app.py`, driven by a new `CORS_ALLOWED_ORIGINS` config value (comma-separated). Inert by default (empty list) since the frontend and API are same-origin today; only matters once the frontend is ever served from a different origin. Added as the outermost middleware layer (after `RequestLoggingMiddleware`) so it can short-circuit preflight `OPTIONS` requests before the rate limiter or routes run, and so its headers land on every response including 429s

@@ -46,7 +46,7 @@ Return result     Run agents
 ```
 
 ## Features
-- Trending Investigations: This is going to be a page that tracks what is currently trending and will fire an update for those topics occasionally.
+- Trending Investigations (implemented, scoped down): a section on the main page (not a separate page) showing the most-asked-about topics from this app's own query history (`src/services/trending_topics.py`), rather than an external trends source. Clicking one starts a fresh investigation through the normal pipeline. No periodic auto-refresh - see TODO.md.
 - Ask the Investigation (implemented): Following the synthesizing of a report, users can ask follow-up questions grounded in the full evidence gathered during that investigation (not just the final summary). Once an investigation completes, the search bar switches into follow-up mode and hits `POST /api/v1/ask`, a single call grounded in the plan/research/fact-checking accumulated client-side; a "New Investigation" button resets back to normal search. Currently keeps evidence client-side per session rather than as a persisted, revisitable investigation - see TODO.md.
   - For example:
     1. User: "Why does the report say NVIDIA's position is strengthening?"
@@ -71,7 +71,7 @@ root_dir/
 ├── frontend/                       # Static single-page UI (no build step) - served by src/api/app.py
 │   ├── index.html
 │   ├── style.css
-│   └── app.js                      # Streams /api/v1/research and renders each stage; once done, switches the search bar into follow-up mode (POST /api/v1/ask) until "New Investigation" resets it
+│   └── app.js                      # Streams /api/v1/research and renders each stage; once done, switches the search bar into follow-up mode (POST /api/v1/ask) until "New Investigation" resets it; also renders clickable trending topics (GET /api/v1/trending)
 │
 ├── src/
 │   ├── __init__.py
@@ -99,7 +99,8 @@ root_dir/
 │   │   └── routes/
 │   │       ├── __init__.py
 │   │       ├── research.py         # POST /api/v1/research - streams ProgressEvents as SSE
-│   │       └── ask.py              # POST /api/v1/ask - single grounded follow-up answer (blocking JSON, not streamed)
+│   │       ├── ask.py              # POST /api/v1/ask - single grounded follow-up answer (blocking JSON, not streamed)
+│   │       └── trending.py         # GET /api/v1/trending - most-asked-about topics (not rate-limited, no LLM call)
 │   │
 │   └── services/
 │       ├── __init__.py
@@ -107,7 +108,8 @@ root_dir/
 │       ├── query_cache_base.py     # QueryCacheBackend protocol shared by every cache backend
 │       ├── query_cache.py          # SQLite-backed cache of research results, keyed by normalized query (active)
 │       ├── cloud_query_cache.py    # DynamoDB-backed cache, same interface (DEAD CODE - not wired in yet, see docstring)
-│       └── cached_research_service.py  # Wires normalizer + cache + ResearchOrchestrator together; run_streaming() drives the API, run() drives main.py
+│       ├── trending_topics.py      # Tracks how often each normalized query is asked ("Trending Investigations")
+│       └── cached_research_service.py  # Wires normalizer + cache + trending + ResearchOrchestrator together; run_streaming() drives the API, run() drives main.py
 │
 └── test/                           # Unit tests, mirroring src/ (mocks the google-genai client and FastAPI's TestClient - no real API calls)
 ```

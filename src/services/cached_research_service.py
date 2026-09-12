@@ -3,6 +3,7 @@ from typing import Iterator
 from google import genai
 from .query_cache import QueryCache
 from .query_normalizer import normalize_query
+from .trending_topics import TrendingTopics
 from ..agents.research_orchestrator import ResearchOrchestrator
 from ..agents.progress_event import ProgressEvent
 
@@ -25,6 +26,7 @@ class CachedResearchService:
         # dead code) - swap it in here once there's an actual deployment to share the cache
         # across.
         self._cache = QueryCache()
+        self._trending = TrendingTopics()
 
     def run_streaming(self, user_input_query: str) -> Iterator[ProgressEvent]:
         """Given a user query, yields a single done=True event with the cached result on a
@@ -36,6 +38,9 @@ class CachedResearchService:
             <ProgressEvent>: Progress updates, ending with a done=True event carrying the result
         """
         normalized_query = normalize_query(self._client, user_input_query)
+        # Counts toward "trending" regardless of hit/miss - popularity is about how often a
+        # topic is asked, not how often the pipeline actually had to run.
+        self._trending.record_query(normalized_query)
 
         cached_result = self._cache.get(normalized_query)
         if cached_result is not None:
