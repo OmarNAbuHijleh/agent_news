@@ -1,5 +1,15 @@
 # CHANGELOG
 
+## [0.1.17] - 2026-09-12
+Changed:
+- Query cache now stores the full evidence trail (plan, research findings, fact-checking, final report) instead of just the final synthesized report. A cache hit now yields a `cache_hit_notice` event followed by a replay of every cached evidence event (identical in shape to a fresh run, just without the transient "still working" status blips), rather than a single opaque final-answer event. This fixes "Ask the Investigation" on cached queries: follow-up questions are now grounded in the same full evidence a fresh run would have provided, not just the final summary - verified live, byte-for-byte matching a real run's evidence
+- `QueryCache`/`DynamoDBQueryCache` themselves needed no changes - they still just store/retrieve an opaque string; `CachedResearchService` now JSON-encodes the filtered event list into that string instead of a plain report
+- Old-format (pre-this-change) cache entries are gracefully treated as a miss rather than crashing on `json.loads` - confirmed live against a real old-format entry from prior sessions, which triggered a clean fresh re-run and re-cached in the new format
+
+Decided:
+- Auth stays deferred - the user is manually limiting who can reach the server instead, revisited only if this project is ever opened to the public
+- "Ask the Investigation" persistence (surviving a reload, revisiting past investigations) is explicitly declined, not just deferred - a personal project doesn't need to solve this. See TODO.md's new "Explicitly Declined" section
+
 ## [0.1.16] - 2026-09-12
 Added:
 - "Trending Investigations" (README feature, now implemented - scoped down per discussion): `src/services/trending_topics.py`'s `TrendingTopics` tracks how often each normalized query is asked (regardless of cache hit/miss), backed by its own table in the same SQLite file as the query cache. New `GET /api/v1/trending` endpoint (not rate-limited - it's a cheap local read, no LLM call)
