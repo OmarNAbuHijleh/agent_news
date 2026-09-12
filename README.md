@@ -106,7 +106,7 @@ root_dir/
 │       ├── __init__.py
 │       ├── query_normalizer.py     # LLM call that canonicalizes a raw query into a cache key
 │       ├── query_cache_base.py     # QueryCacheBackend protocol shared by every cache backend
-│       ├── query_cache.py          # SQLite-backed cache of research results, keyed by normalized query (active)
+│       ├── query_cache.py          # SQLite-backed cache of the full evidence trail (plan/research/fact-check/final), keyed by normalized query (active)
 │       ├── cloud_query_cache.py    # DynamoDB-backed cache, same interface (DEAD CODE - not wired in yet, see docstring)
 │       ├── trending_topics.py      # Tracks how often each normalized query is asked ("Trending Investigations")
 │       └── cached_research_service.py  # Wires normalizer + cache + trending + ResearchOrchestrator together; run_streaming() drives the API, run() drives main.py

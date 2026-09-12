@@ -7,7 +7,7 @@ const STAGE_META = {
   fact_check_result: { label: "Fact Check", kind: "content" },
   synthesizing: { label: "Synthesizing", kind: "status" },
   final: { label: "Final Report", kind: "final" },
-  cache_hit: { label: "Answer (from cache)", kind: "final" },
+  cache_hit_notice: { label: "From Cache", kind: "status" },
 };
 
 const FRESH_QUERY_PLACEHOLDER = "e.g. Nvidia stock price";
