@@ -10,6 +10,9 @@ def make_service(monkeypatch, cached_value=None, orchestrator_events=None):
     monkeypatch.setattr(cached_service_module, "QueryCache", MagicMock(return_value=fake_cache))
     monkeypatch.setattr(cached_service_module, "normalize_query", MagicMock(return_value="normalized query"))
 
+    fake_trending = MagicMock()
+    monkeypatch.setattr(cached_service_module, "TrendingTopics", MagicMock(return_value=fake_trending))
+
     fake_orchestrator = MagicMock()
     fake_orchestrator.run_streaming.return_value = iter(
         orchestrator_events if orchestrator_events is not None
@@ -18,13 +21,13 @@ def make_service(monkeypatch, cached_value=None, orchestrator_events=None):
     monkeypatch.setattr(cached_service_module, "ResearchOrchestrator", MagicMock(return_value=fake_orchestrator))
 
     service = CachedResearchService(api_key="fake-key")
-    return service, fake_cache, fake_orchestrator
+    return service, fake_cache, fake_orchestrator, fake_trending
 
 
 # --- run (blocking) ---
 
 def test_run_returns_cached_result_on_hit_without_running_orchestrator(monkeypatch):
-    service, fake_cache, fake_orchestrator = make_service(monkeypatch, cached_value="cached result")
+    service, fake_cache, fake_orchestrator, _ = make_service(monkeypatch, cached_value="cached result")
 
     result = service.run("what's nvda doing today?")
 
@@ -34,7 +37,7 @@ def test_run_returns_cached_result_on_hit_without_running_orchestrator(monkeypat
 
 
 def test_run_calls_orchestrator_and_caches_result_on_miss(monkeypatch):
-    service, fake_cache, fake_orchestrator = make_service(monkeypatch, cached_value=None)
+    service, fake_cache, fake_orchestrator, _ = make_service(monkeypatch, cached_value=None)
 
     result = service.run("what's nvda doing today?")
 
@@ -44,7 +47,7 @@ def test_run_calls_orchestrator_and_caches_result_on_miss(monkeypatch):
 
 
 def test_run_looks_up_cache_by_normalized_query(monkeypatch):
-    service, fake_cache, _ = make_service(monkeypatch, cached_value=None)
+    service, fake_cache, _, _ = make_service(monkeypatch, cached_value=None)
 
     service.run("what's nvda doing today?")
 
@@ -54,7 +57,7 @@ def test_run_looks_up_cache_by_normalized_query(monkeypatch):
 # --- run_streaming ---
 
 def test_run_streaming_yields_a_single_done_event_on_cache_hit(monkeypatch):
-    service, _, fake_orchestrator = make_service(monkeypatch, cached_value="cached result")
+    service, _, fake_orchestrator, _ = make_service(monkeypatch, cached_value="cached result")
 
     events = list(service.run_streaming("what's nvda doing today?"))
 
@@ -68,9 +71,27 @@ def test_run_streaming_forwards_every_orchestrator_event_on_miss(monkeypatch):
         ProgressEvent(stage="plan", content="1.) look it up"),
         ProgressEvent(stage="final", content="fresh research result", done=True),
     ]
-    service, fake_cache, _ = make_service(monkeypatch, cached_value=None, orchestrator_events=orchestrator_events)
+    service, fake_cache, _, _ = make_service(monkeypatch, cached_value=None, orchestrator_events=orchestrator_events)
 
     events = list(service.run_streaming("what's nvda doing today?"))
 
     assert events == orchestrator_events
     fake_cache.set.assert_called_once_with("normalized query", "fresh research result")
+
+
+# --- trending ---
+
+def test_run_streaming_records_query_as_trending_on_hit(monkeypatch):
+    service, _, _, fake_trending = make_service(monkeypatch, cached_value="cached result")
+
+    list(service.run_streaming("what's nvda doing today?"))
+
+    fake_trending.record_query.assert_called_once_with("normalized query")
+
+
+def test_run_streaming_records_query_as_trending_on_miss(monkeypatch):
+    service, _, _, fake_trending = make_service(monkeypatch, cached_value=None)
+
+    list(service.run_streaming("what's nvda doing today?"))
+
+    fake_trending.record_query.assert_called_once_with("normalized query")

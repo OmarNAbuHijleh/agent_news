@@ -26,3 +26,7 @@ RATE_LIMIT_WINDOW_SECONDS: float = float(os.getenv("RATE_LIMIT_WINDOW_SECONDS", 
 # cross-origin JS needs to read its responses. Set this only once the frontend is ever served
 # from a different origin than the API (see TODO.md).
 CORS_ALLOWED_ORIGINS: list[str] = [origin.strip() for origin in os.getenv("CORS_ALLOWED_ORIGINS", "").split(",") if origin.strip()]
+
+# "Trending" topics are derived from this app's own query history (see TrendingTopics) rather
+# than an external trends source - how many of the most-asked-about topics to surface.
+TRENDING_TOPICS_LIMIT: int = int(os.getenv("TRENDING_TOPICS_LIMIT", "5"))

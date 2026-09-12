@@ -21,18 +21,26 @@ const input = document.getElementById("query-input");
 const statusBanner = document.getElementById("status-banner");
 const newInvestigationButton = document.getElementById("new-investigation-button");
 const subtitle = document.getElementById("subtitle");
+const trendingSection = document.getElementById("trending-section");
+const trendingTopicsContainer = document.getElementById("trending-topics");
 
 // Accumulates every piece of real evidence (not transient status lines) from the current
 // investigation, so a follow-up question can be grounded in the full evidence, not just the
 // final summary - closer to the README's "RAG over the investigation's evidence" description.
 let investigationContext = "";
 let hasCompletedInvestigation = false;
+let hasTrendingTopics = false;
+
+function updateTrendingVisibility(isBusy) {
+  trendingSection.hidden = isBusy || !hasTrendingTopics;
+}
 
 function setBusy(isBusy) {
   // While busy, the search bar is replaced entirely by the status banner (not just disabled),
   // so it's unmistakable that no other query can be started until this one finishes.
   form.hidden = isBusy;
   statusBanner.hidden = !isBusy;
+  updateTrendingVisibility(isBusy);
 }
 
 function enterFollowUpMode() {
@@ -126,7 +134,41 @@ async function streamResearch(query) {
   } finally {
     setBusy(false);
     input.focus();
+    refreshTrendingTopics();
   }
+}
+
+async function refreshTrendingTopics() {
+  try {
+    const response = await fetch("/api/v1/trending");
+    if (!response.ok) return;
+    const { topics } = await response.json();
+
+    trendingTopicsContainer.replaceChildren();
+    for (const topic of topics) {
+      const button = document.createElement("button");
+      button.type = "button";
+      button.className = "trending-topic-button";
+      button.textContent = topic;
+      button.addEventListener("click", () => startTrendingQuery(topic));
+      trendingTopicsContainer.appendChild(button);
+    }
+
+    hasTrendingTopics = topics.length > 0;
+    updateTrendingVisibility(false);
+  } catch (err) {
+    console.error("Failed to load trending topics", err);
+  }
+}
+
+function startTrendingQuery(topic) {
+  // Always starts a fresh investigation on the clicked topic, even if the user was mid
+  // follow-up on something else - a trending click is a request to switch topics, not to ask
+  // a follow-up about them.
+  resetToFreshQueryMode();
+  appendMessage("user", "You", topic);
+  setBusy(true);
+  streamResearch(topic);
 }
 
 async function askInvestigation(question) {
@@ -164,6 +206,12 @@ form.addEventListener("submit", (event) => {
     streamResearch(query);
   }
 });
+
+newInvestigationButton.addEventListener("click", () => {
+  resetToFreshQueryMode();
+});
+
+refreshTrendingTopics();
 
 newInvestigationButton.addEventListener("click", () => {
   resetToFreshQueryMode();
