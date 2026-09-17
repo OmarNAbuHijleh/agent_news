@@ -1,5 +1,6 @@
 import logging
 import httpx
+from .tool_result_cache import cached_tool_call
 from config import NEWSDATA_IO_API_KEY, NEWSDATA_MAX_ARTICLES
 
 logger = logging.getLogger(__name__)
@@ -24,15 +25,20 @@ NEWSDATA_NEWS_TOOL_DECLARATION: dict = {
 
 
 def search_newsdata_news(query: str) -> dict:
-    """Searches NewsData.io for recent English-language articles matching query. This is the
-    implementation dispatched for the "search_newsdata_news" function tool declared above - see
-    NEWSDATA_NEWS_TOOL_DECLARATION and research_agent.py's _TOOL_DISPATCH.
+    """Searches NewsData.io for recent English-language articles matching query (cached for
+    CACHE_TTL_SECONDS - see tool_result_cache.py). This is the implementation dispatched for the
+    "search_newsdata_news" function tool declared above - see NEWSDATA_NEWS_TOOL_DECLARATION and
+    research_agent.py's _TOOL_DISPATCH.
     Args:
         query <str>: The search query
     Returns:
         <dict>: {"articles": [{"headline", "published_at", "source", "url", "description"}, ...]}
             on success, or {"error": "..."} if the API key isn't configured or the request fails
     """
+    return cached_tool_call("search_newsdata_news", query, lambda: _fetch_newsdata_news(query))
+
+
+def _fetch_newsdata_news(query: str) -> dict:
     if not NEWSDATA_IO_API_KEY:
         return {"error": "NEWSDATA_IO_API_KEY is not configured"}
 

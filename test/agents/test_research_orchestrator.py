@@ -181,3 +181,19 @@ def test_run_streaming_raises_once_max_iterations_exceeded(orchestrator, monkeyp
 
     with pytest.raises(Exception):
         list(orchestrator.run_streaming("what is nvidia stock price"))
+
+
+def test_run_streaming_shares_one_tool_budget_across_every_iteration(orchestrator, monkeypatch):
+    """Regression test: the tool call budget must span the whole investigation (every re-plan
+    iteration), not reset per iteration - otherwise it wouldn't actually cap worst-case fan-out."""
+    monkeypatch.setattr(orchestrator_module, "research_agent", MagicMock(return_value="research results"))
+    monkeypatch.setattr(orchestrator_module, "fact_checking_agent", MagicMock(return_value="fact check results"))
+    monkeypatch.setattr(orchestrator_module, "synthesis_agent", MagicMock(return_value="final summary"))
+    monkeypatch.setattr(orchestrator, "create_plan", MagicMock(return_value="a plan"))
+    monkeypatch.setattr(orchestrator, "results_acceptable", MagicMock(side_effect=[(True, "revised plan"), (False, "")]))
+
+    list(orchestrator.run_streaming("what is nvidia stock price"))
+
+    call_list = orchestrator_module.research_agent.call_args_list
+    assert len(call_list) == 2
+    assert call_list[0].kwargs["tool_budget"] is call_list[1].kwargs["tool_budget"]

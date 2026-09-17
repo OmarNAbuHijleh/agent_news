@@ -2,6 +2,7 @@ import json
 from unittest.mock import MagicMock
 import src.agents.research_agent as research_agent_module
 from src.agents.research_agent import research_agent
+from src.agents.tool_call_budget import ToolCallBudget
 
 
 def test_research_agent_returns_output_when_no_tool_calls(make_interaction):
@@ -108,3 +109,43 @@ def test_research_agent_returns_an_error_result_for_an_unrecognized_tool_name(ma
     second_call_kwargs = client.interactions.create.call_args_list[1].kwargs
     fed_back = second_call_kwargs["input"]
     assert json.loads(fed_back[0]["result"][0]["text"]) == {"error": "unknown tool: some_unregistered_tool"}
+
+
+def test_research_agent_does_not_dispatch_once_the_tool_budget_is_exhausted(make_interaction, make_function_call_step, monkeypatch):
+    fake_search_news = MagicMock(return_value={"articles": ["should not be reached"]})
+    monkeypatch.setattr(research_agent_module, "_TOOL_DISPATCH", {"search_news": fake_search_news})
+    exhausted_budget = ToolCallBudget(max_calls=0)
+
+    client = MagicMock()
+    client.interactions.create.side_effect = [
+        make_interaction(output_text="thinking...", steps=[make_function_call_step(name="search_news", id="call-1", arguments={"query": "nvidia"})]),
+        make_interaction(output_text="done", steps=[]),
+    ]
+
+    research_agent(client, "do some research", tool_budget=exhausted_budget)
+
+    fake_search_news.assert_not_called()
+    second_call_kwargs = client.interactions.create.call_args_list[1].kwargs
+    fed_back = second_call_kwargs["input"]
+    assert "budget exhausted" in fed_back[0]["result"][0]["text"]
+
+
+def test_research_agent_shares_the_tool_budget_across_multiple_calls_within_it(make_interaction, make_function_call_step, monkeypatch):
+    fake_search_news = MagicMock(return_value={"articles": []})
+    monkeypatch.setattr(research_agent_module, "_TOOL_DISPATCH", {"search_news": fake_search_news})
+    shared_budget = ToolCallBudget(max_calls=1)
+
+    client = MagicMock()
+    client.interactions.create.side_effect = [
+        make_interaction(output_text="thinking...", steps=[make_function_call_step(name="search_news", id="call-1", arguments={"query": "nvidia"})]),
+        make_interaction(output_text="done", steps=[]),
+    ]
+    research_agent(client, "do some research", tool_budget=shared_budget)
+
+    client.interactions.create.side_effect = [
+        make_interaction(output_text="thinking...", steps=[make_function_call_step(name="search_news", id="call-2", arguments={"query": "tesla"})]),
+        make_interaction(output_text="done", steps=[]),
+    ]
+    research_agent(client, "do some other research", tool_budget=shared_budget)
+
+    fake_search_news.assert_called_once()  # second research_agent() call found the budget already spent

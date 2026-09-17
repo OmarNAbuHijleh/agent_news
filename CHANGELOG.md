@@ -1,5 +1,15 @@
 # CHANGELOG
 
+## [0.1.19] - 2026-09-17
+Added:
+- `src/agents/agent_tools/tool_result_cache.py`: `cached_tool_call()` caches a custom tool's result by `(tool_name, query)` for `CACHE_TTL_SECONDS` (~1 week, same TTL as investigation results by design - reuses `QueryCache` directly rather than a second cache implementation). Error results are never cached, so a transient failure or missing API key doesn't get frozen in place for a week. Both `search_news` and `search_newsdata_news` now route through this
+- `src/agents/tool_call_budget.py`: `ToolCallBudget`, a shared counter capping total *custom* (metered) tool calls across a whole investigation - every re-plan iteration, not just one `research_agent()` call. `ResearchOrchestrator.run_streaming()` creates one per investigation and threads it through every iteration; `research_agent()`'s dispatch loop consumes from it before calling a custom tool, returning a graceful error (which the model already falls back to `google_search` from) once exhausted. Default 10 calls/investigation (`MAX_NEWS_TOOL_CALLS_PER_INVESTIGATION`)
+- Unit tests for both, plus regression coverage that the budget is genuinely shared (same object) across iterations, not reset per iteration
+
+Decided (see TODO.md): deliberately no self-imposed daily/global quota ceiling. Both tools already degrade gracefully to an error result on a real vendor 429 - the model already treats that identically to a budget-exhausted error - so a self-imposed ceiling would only duplicate existing behavior without adding protection. The actual gap was redundant/excessive calls *within one query*, which the cache and per-investigation budget address directly.
+
+Verified live: a repeated identical tool call was served from cache with zero HTTP request on the second call (0.75s -> 0.0s); a real `research_agent()` run with a 1-call budget and a plan naming both tools dispatched the first and cleanly blocked the second with a logged "budget exhausted" warning.
+
 ## [0.1.18] - 2026-09-17
 Added:
 - Two real custom tools for `research_agent`: `search_news` (The Guardian Open Platform - full article text, needs `GUARDIAN_API_KEY`) and `search_newsdata_news` (NewsData.io - broader multi-publisher coverage, snippet/description only, needs `NEWSDATA_IO_API_KEY`), in `src/agents/agent_tools/`. Both free-tier, both optional - if a key isn't configured the tool returns `{"error": ...}` rather than crashing, which the model can see and work around

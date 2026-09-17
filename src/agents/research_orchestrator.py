@@ -8,8 +8,9 @@ from .agent_type_enum import AgentType
 from .research_step import ResearchStep
 from .research_utils import research_history_to_text
 from .progress_event import ProgressEvent
+from .tool_call_budget import ToolCallBudget
 from .retry import call_with_retry
-from config import MAX_RESEARCH_ITERATIONS
+from config import MAX_RESEARCH_ITERATIONS, MAX_NEWS_TOOL_CALLS_PER_INVESTIGATION
 
 
 _research_agent_system_prompt: str = """You are a researcher that is creating a research plan for the news relating to the user query. Produce a list of steps as tasks to perform to answer the query with proper research. Output the steps as so (replacing the '<>' with actual step):
@@ -91,6 +92,9 @@ class ResearchOrchestrator:
 
         research_contents: list[ResearchStep] = [] # This will be used to track our research process to see what we've already done and the results
         research_not_completed: bool = True
+        # Shared across every research_agent() call below (every re-plan iteration), not reset
+        # per iteration - see ToolCallBudget for why this needs to span the whole investigation.
+        tool_budget = ToolCallBudget(MAX_NEWS_TOOL_CALLS_PER_INVESTIGATION)
 
         yield ProgressEvent(stage="planning", content="Creating a research plan...")
         research_plan: str = self.create_plan(user_input_query)
@@ -105,7 +109,7 @@ class ResearchOrchestrator:
             research_contents.append(ResearchStep(AgentType.RESEARCH_PLANNER, research_plan))
             # run the research process
             yield ProgressEvent(stage="researching", content=f"Researching (iteration {num_iterations + 1})...")
-            research_results = research_agent(self._client, research_plan)
+            research_results = research_agent(self._client, research_plan, tool_budget=tool_budget)
             research_contents.append(ResearchStep(AgentType.RESEARCHER, research_results))
             yield ProgressEvent(stage="research_result", content=research_results)
 
