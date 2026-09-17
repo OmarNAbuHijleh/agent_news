@@ -22,7 +22,7 @@ Chain of thought is exposed and visible for all to see - the frontend streams ea
 - python and its accompanying libraries (see "pyproject.toml")
 - AWS lambda (for API), DynamoDB/ElastiCache, Cloudwatch - not deployed yet; the API currently runs locally via FastAPI/uvicorn (`python -m src.api.app`)
 - LLM API: Google Gemini (`google-genai`)
-- search/news API - not yet; research currently relies on Gemini's built-in `google_search`/`url_context` tools
+- search/news API - implemented: The Guardian Open Platform (full article text) and NewsData.io (broader multi-publisher coverage, snippets only) as custom function tools alongside Gemini's built-in `google_search`/`url_context` (see `src/agents/agent_tools/`). Both are free-tier and optional - research still works without them, the tools just return an error the model can work around if a key isn't configured
 
 
 ### Cost Saving
@@ -85,11 +85,14 @@ root_dir/
 │   │   ├── progress_event.py       # ProgressEvent dataclass (stage, content, done) for streaming
 │   │   ├── retry.py                # Rate-limit retry/backoff wrapper for API calls
 │   │   ├── research_orchestrator.py# ResearchOrchestrator: owns the shared client; run_streaming() yields ProgressEvents, run() wraps it and returns just the final result
-│   │   ├── research_agent.py
+│   │   ├── research_agent.py       # Tool-calling loop; _TOOL_DECLARATIONS (sent to the API) vs _TOOL_DISPATCH (custom tool implementations, looked up by name) are kept separate on purpose - see agent_tools/
 │   │   ├── fact_checking_agent.py
 │   │   ├── synthesis_agent.py
 │   │   ├── investigation_qa_agent.py  # Answers a follow-up question, grounded in the full investigation evidence ("Ask the Investigation")
-│   │   └── agent_tools/            # Custom tools for the research agent (planned, not yet implemented)
+│   │   └── agent_tools/
+│   │       ├── __init__.py
+│   │       ├── news_search_tool.py      # search_news - The Guardian Open Platform, full article text (needs GUARDIAN_API_KEY)
+│   │       └── newsdata_news_tool.py    # search_newsdata_news - NewsData.io, broader multi-publisher coverage, snippet only (needs NEWSDATA_IO_API_KEY)
 │   │
 │   ├── api/
 │   │   ├── __init__.py

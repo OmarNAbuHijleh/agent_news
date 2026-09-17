@@ -4,16 +4,31 @@ from collections.abc import Callable
 from typing import Any
 import json
 from .retry import call_with_retry
+from .agent_tools.news_search_tool import NEWS_SEARCH_TOOL_DECLARATION, search_news
+from .agent_tools.newsdata_news_tool import NEWSDATA_NEWS_TOOL_DECLARATION, search_newsdata_news
 from config import MAX_RESEARCH_AGENT_TOOL_ROUNDS, RESEARCH_AGENT_MAX_OUTPUT_TOKENS
 
 logger = logging.getLogger(__name__)
 
 _research_agent_prompt: str = "Given the research plan, perform tool calls in succession to execute the steps for that research plan. Cite your sources when steps are completed."
-_TOOLS: list[dict[str, str] | Callable[..., Any]]  = [
+
+# Declarations sent to the API (tools= on interactions.create) - built-in tools (google_search,
+# url_context) run server-side and never surface as function_call steps; custom tools like
+# search_news/search_newsdata_news do, and need a matching entry in _TOOL_DISPATCH below to
+# actually run.
+_TOOL_DECLARATIONS: list[dict[str, Any]] = [
     {"type": "google_search"},
     {"type": "url_context"},
-    # TODO: Consider adding the file search tool from Google. We also need to add our own custom tools once we refine agent functions and determine the flow of obtaining cached contents in databases
+    NEWS_SEARCH_TOOL_DECLARATION,
+    NEWSDATA_NEWS_TOOL_DECLARATION,
+    # TODO: Consider adding the file search tool from Google.
 ]
+# Implementations for custom tools only - looked up by name when a function_call step for a
+# custom tool appears. Built-in tools are never dispatched through here.
+_TOOL_DISPATCH: dict[str, Callable[..., Any]] = {
+    "search_news": search_news,
+    "search_newsdata_news": search_newsdata_news,
+}
 _GENERATION_CONFIG = {"max_output_tokens": RESEARCH_AGENT_MAX_OUTPUT_TOKENS}
 
 
@@ -31,7 +46,7 @@ def research_agent(client: genai.Client, research_plan: str) -> str:
     interaction = call_with_retry(lambda: client.interactions.create(
         model="gemini-3.7-flash",
         system_instruction=_research_agent_prompt,
-        tools=_TOOLS,
+        tools=_TOOL_DECLARATIONS,
         input=research_plan,
         generation_config=_GENERATION_CONFIG,
     ), stage="research_agent.initial")
@@ -51,7 +66,9 @@ def research_agent(client: genai.Client, research_plan: str) -> str:
             break
         results = []
         for tool_call in tool_calls:
-            result = _TOOLS[tool_call.name](**tool_call.arguments)
+            logger.info("research_agent: dispatching custom tool %s(%r)", tool_call.name, tool_call.arguments)
+            tool_function = _TOOL_DISPATCH.get(tool_call.name)
+            result = {"error": f"unknown tool: {tool_call.name}"} if tool_function is None else tool_function(**tool_call.arguments)
             results.append(
                 {
                     "type": "function_result",
@@ -69,7 +86,7 @@ def research_agent(client: genai.Client, research_plan: str) -> str:
             model="gemini-3.7-flash",
             previous_interaction_id=interaction.id,
             input=results,
-            tools=_TOOLS,
+            tools=_TOOL_DECLARATIONS,
             generation_config=_GENERATION_CONFIG,
         ), stage=f"research_agent.tool_round_{tool_round}")
         return_text += f"{interaction.output_text}\n"

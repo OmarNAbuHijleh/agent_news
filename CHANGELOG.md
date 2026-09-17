@@ -1,5 +1,17 @@
 # CHANGELOG
 
+## [0.1.18] - 2026-09-17
+Added:
+- Two real custom tools for `research_agent`: `search_news` (The Guardian Open Platform - full article text, needs `GUARDIAN_API_KEY`) and `search_newsdata_news` (NewsData.io - broader multi-publisher coverage, snippet/description only, needs `NEWSDATA_IO_API_KEY`), in `src/agents/agent_tools/`. Both free-tier, both optional - if a key isn't configured the tool returns `{"error": ...}` rather than crashing, which the model can see and work around
+- `httpx` added as an explicit dependency (was already present transitively via `google-genai`)
+- Unit tests for both tools (mocked HTTP, no real network calls) and for the dispatch mechanism itself
+
+Fixed:
+- The `_TOOLS[tool_call.name]` dispatch bug (`_TOOLS` was a list, indexed by a string - `TypeError`). Root cause: `research_agent.py` conflated tool *declarations* (sent to the API) with tool *implementations* (dispatched when a function_call step appears). Split into `_TOOL_DECLARATIONS` (list, unchanged built-ins + function-declaration schemas, verified against the installed SDK's `FunctionParam`/`FunctionCallStep`/`FunctionResultStepParam` types rather than guessed) and `_TOOL_DISPATCH` (dict, custom tool implementations only - built-ins never dispatch through here since they run server-side). Also hardened: an unrecognized tool name now returns an error result instead of raising `KeyError`
+- Removed the `xfail(strict=True)` regression test that pinned this bug (it would now XPASS-fail by design) and replaced it with real passing coverage of the dispatch, feed-back, and unknown-tool-name paths
+
+Verified live (not just mocked): ran `research_agent()` directly against the real Gemini API with a plan naming both tools explicitly. The model called `search_news` and `search_newsdata_news` in the same tool round, both real HTTP calls to Guardian/NewsData.io succeeded, and the final summary cited specific facts (exact rate figures, headlines, dates, URLs) traceable directly to the tool results - not generic model knowledge.
+
 ## [0.1.17] - 2026-09-12
 Changed:
 - Query cache now stores the full evidence trail (plan, research findings, fact-checking, final report) instead of just the final synthesized report. A cache hit now yields a `cache_hit_notice` event followed by a replay of every cached evidence event (identical in shape to a fresh run, just without the transient "still working" status blips), rather than a single opaque final-answer event. This fixes "Ask the Investigation" on cached queries: follow-up questions are now grounded in the same full evidence a fresh run would have provided, not just the final summary - verified live, byte-for-byte matching a real run's evidence

@@ -30,3 +30,16 @@ CORS_ALLOWED_ORIGINS: list[str] = [origin.strip() for origin in os.getenv("CORS_
 # "Trending" topics are derived from this app's own query history (see TrendingTopics) rather
 # than an external trends source - how many of the most-asked-about topics to surface.
 TRENDING_TOPICS_LIMIT: int = int(os.getenv("TRENDING_TOPICS_LIMIT", "5"))
+
+# Free key from https://open-platform.theguardian.com/access/ - used by the search_news custom
+# tool (src/agents/agent_tools/news_search_tool.py) so the research agent can pull real news
+# articles with full text instead of relying only on general web search.
+GUARDIAN_API_KEY: str | None = os.getenv("GUARDIAN_API_KEY")
+NEWS_SEARCH_MAX_ARTICLES: int = int(os.getenv("NEWS_SEARCH_MAX_ARTICLES", "5"))
+NEWS_SEARCH_MAX_BODY_CHARS: int = int(os.getenv("NEWS_SEARCH_MAX_BODY_CHARS", "3000"))
+
+# Free key from https://newsdata.io/register - second news source, broader multi-publisher
+# coverage than Guardian (used by src/agents/agent_tools/newsdata_news_tool.py). Free tier only
+# returns a description/snippet, not full article body.
+NEWSDATA_IO_API_KEY: str | None = os.getenv("NEWSDATA_IO_API_KEY")
+NEWSDATA_MAX_ARTICLES: int = int(os.getenv("NEWSDATA_MAX_ARTICLES", "5"))
