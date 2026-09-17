@@ -1,7 +1,7 @@
 import httpx
 from unittest.mock import MagicMock
 import src.agents.agent_tools.newsdata_news_tool as newsdata_tool_module
-from src.agents.agent_tools.newsdata_news_tool import search_newsdata_news
+from src.agents.agent_tools.newsdata_news_tool import search_newsdata_news, _fetch_newsdata_news
 
 
 def make_newsdata_response(results: list[dict], status_code: int = 200) -> MagicMock:
@@ -12,23 +12,39 @@ def make_newsdata_response(results: list[dict], status_code: int = 200) -> Magic
     return response
 
 
-def test_search_newsdata_news_returns_error_when_api_key_missing(monkeypatch):
+def test_search_newsdata_news_routes_through_the_tool_result_cache(monkeypatch):
+    fake_cached_tool_call = MagicMock(return_value={"articles": []})
+    monkeypatch.setattr(newsdata_tool_module, "cached_tool_call", fake_cached_tool_call)
+    fake_fetch = MagicMock(return_value={"articles": ["real result"]})
+    monkeypatch.setattr(newsdata_tool_module, "_fetch_newsdata_news", fake_fetch)
+
+    result = search_newsdata_news("nvidia")
+
+    assert result == {"articles": []}
+    args, _ = fake_cached_tool_call.call_args
+    assert args[0] == "search_newsdata_news"
+    assert args[1] == "nvidia"
+    assert args[2]() == {"articles": ["real result"]}
+    fake_fetch.assert_called_once_with("nvidia")
+
+
+def test_fetch_newsdata_news_returns_error_when_api_key_missing(monkeypatch):
     monkeypatch.setattr(newsdata_tool_module, "NEWSDATA_IO_API_KEY", None)
     fake_get = MagicMock()
     monkeypatch.setattr(newsdata_tool_module.httpx, "get", fake_get)
 
-    result = search_newsdata_news("nvidia")
+    result = _fetch_newsdata_news("nvidia")
 
     assert result == {"error": "NEWSDATA_IO_API_KEY is not configured"}
     fake_get.assert_not_called()
 
 
-def test_search_newsdata_news_passes_query_key_and_english_language_filter(monkeypatch):
+def test_fetch_newsdata_news_passes_query_key_and_english_language_filter(monkeypatch):
     monkeypatch.setattr(newsdata_tool_module, "NEWSDATA_IO_API_KEY", "test-key")
     fake_get = MagicMock(return_value=make_newsdata_response([]))
     monkeypatch.setattr(newsdata_tool_module.httpx, "get", fake_get)
 
-    search_newsdata_news("nvidia earnings")
+    _fetch_newsdata_news("nvidia earnings")
 
     _, kwargs = fake_get.call_args
     assert kwargs["params"]["q"] == "nvidia earnings"
@@ -36,7 +52,7 @@ def test_search_newsdata_news_passes_query_key_and_english_language_filter(monke
     assert kwargs["params"]["language"] == "en"
 
 
-def test_search_newsdata_news_returns_headline_date_source_url_and_description(monkeypatch):
+def test_fetch_newsdata_news_returns_headline_date_source_url_and_description(monkeypatch):
     monkeypatch.setattr(newsdata_tool_module, "NEWSDATA_IO_API_KEY", "test-key")
     newsdata_results = [
         {
@@ -49,7 +65,7 @@ def test_search_newsdata_news_returns_headline_date_source_url_and_description(m
     ]
     monkeypatch.setattr(newsdata_tool_module.httpx, "get", MagicMock(return_value=make_newsdata_response(newsdata_results)))
 
-    result = search_newsdata_news("nvidia")
+    result = _fetch_newsdata_news("nvidia")
 
     assert result == {
         "articles": [
@@ -64,7 +80,7 @@ def test_search_newsdata_news_returns_headline_date_source_url_and_description(m
     }
 
 
-def test_search_newsdata_news_returns_error_dict_on_http_failure(monkeypatch):
+def test_fetch_newsdata_news_returns_error_dict_on_http_failure(monkeypatch):
     monkeypatch.setattr(newsdata_tool_module, "NEWSDATA_IO_API_KEY", "test-key")
 
     def raise_error(*args, **kwargs):
@@ -72,6 +88,6 @@ def test_search_newsdata_news_returns_error_dict_on_http_failure(monkeypatch):
 
     monkeypatch.setattr(newsdata_tool_module.httpx, "get", MagicMock(side_effect=raise_error))
 
-    result = search_newsdata_news("nvidia")
+    result = _fetch_newsdata_news("nvidia")
 
     assert "error" in result

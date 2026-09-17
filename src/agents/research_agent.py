@@ -4,6 +4,7 @@ from collections.abc import Callable
 from typing import Any
 import json
 from .retry import call_with_retry
+from .tool_call_budget import ToolCallBudget
 from .agent_tools.news_search_tool import NEWS_SEARCH_TOOL_DECLARATION, search_news
 from .agent_tools.newsdata_news_tool import NEWSDATA_NEWS_TOOL_DECLARATION, search_newsdata_news
 from config import MAX_RESEARCH_AGENT_TOOL_ROUNDS, RESEARCH_AGENT_MAX_OUTPUT_TOKENS
@@ -32,12 +33,14 @@ _TOOL_DISPATCH: dict[str, Callable[..., Any]] = {
 _GENERATION_CONFIG = {"max_output_tokens": RESEARCH_AGENT_MAX_OUTPUT_TOKENS}
 
 
-def research_agent(client: genai.Client, research_plan: str) -> str:
+def research_agent(client: genai.Client, research_plan: str, tool_budget: ToolCallBudget | None = None) -> str:
     """Given a research plan string, we want to have our language model perform the tool calls to fulfill each research step until it completes the research.
     Bounded by MAX_RESEARCH_AGENT_TOOL_ROUNDS tool-call rounds and RESEARCH_AGENT_MAX_OUTPUT_TOKENS output tokens per call, so a single plan can't run away on token usage.
     Args:
         client <genai.Client>: The shared client for this research session
         research_plan <str>: The research plan string that will be followed, with the results provided
+        tool_budget <ToolCallBudget | None> = None: Shared cap on custom (metered) tool calls across
+            the whole investigation (every re-plan iteration), not just this one call. None means unlimited.
     Returns:
         <str>: The results of the research plan
     """
@@ -66,9 +69,15 @@ def research_agent(client: genai.Client, research_plan: str) -> str:
             break
         results = []
         for tool_call in tool_calls:
-            logger.info("research_agent: dispatching custom tool %s(%r)", tool_call.name, tool_call.arguments)
             tool_function = _TOOL_DISPATCH.get(tool_call.name)
-            result = {"error": f"unknown tool: {tool_call.name}"} if tool_function is None else tool_function(**tool_call.arguments)
+            if tool_function is None:
+                result = {"error": f"unknown tool: {tool_call.name}"}
+            elif tool_budget is not None and not tool_budget.try_consume():
+                logger.warning("research_agent: tool call budget exhausted, skipping %s", tool_call.name)
+                result = {"error": "tool call budget exhausted for this investigation - use google_search instead"}
+            else:
+                logger.info("research_agent: dispatching custom tool %s(%r)", tool_call.name, tool_call.arguments)
+                result = tool_function(**tool_call.arguments)
             results.append(
                 {
                     "type": "function_result",

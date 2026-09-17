@@ -1,6 +1,7 @@
 import logging
 import re
 import httpx
+from .tool_result_cache import cached_tool_call
 from config import GUARDIAN_API_KEY, NEWS_SEARCH_MAX_ARTICLES, NEWS_SEARCH_MAX_BODY_CHARS
 
 logger = logging.getLogger(__name__)
@@ -31,15 +32,20 @@ def _strip_html(html: str) -> str:
 
 
 def search_news(query: str) -> dict:
-    """Searches The Guardian's Open Platform for recent articles matching query. This is the
-    implementation dispatched for the "search_news" function tool declared above - see
-    NEWS_SEARCH_TOOL_DECLARATION and research_agent.py's _TOOL_DISPATCH.
+    """Searches The Guardian's Open Platform for recent articles matching query (cached for
+    CACHE_TTL_SECONDS - see tool_result_cache.py). This is the implementation dispatched for the
+    "search_news" function tool declared above - see NEWS_SEARCH_TOOL_DECLARATION and
+    research_agent.py's _TOOL_DISPATCH.
     Args:
         query <str>: The search query
     Returns:
         <dict>: {"articles": [{"headline", "published_at", "url", "body"}, ...]} on success,
             or {"error": "..."} if the API key isn't configured or the request fails
     """
+    return cached_tool_call("search_news", query, lambda: _fetch_guardian_news(query))
+
+
+def _fetch_guardian_news(query: str) -> dict:
     if not GUARDIAN_API_KEY:
         return {"error": "GUARDIAN_API_KEY is not configured"}
 

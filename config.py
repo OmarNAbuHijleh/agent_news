@@ -43,3 +43,10 @@ NEWS_SEARCH_MAX_BODY_CHARS: int = int(os.getenv("NEWS_SEARCH_MAX_BODY_CHARS", "3
 # returns a description/snippet, not full article body.
 NEWSDATA_IO_API_KEY: str | None = os.getenv("NEWSDATA_IO_API_KEY")
 NEWSDATA_MAX_ARTICLES: int = int(os.getenv("NEWSDATA_MAX_ARTICLES", "5"))
+
+# Caps total custom (metered) tool calls - search_news + search_newsdata_news combined - across
+# a whole investigation (every re-plan iteration, not just one), so one query's re-planning loop
+# can't burn a disproportionate share of a free-tier daily quota on redundant searches. Distinct
+# from MAX_RESEARCH_AGENT_TOOL_ROUNDS, which caps rounds, not calls - a single round can contain
+# multiple tool calls. See ToolCallBudget.
+MAX_NEWS_TOOL_CALLS_PER_INVESTIGATION: int = int(os.getenv("MAX_NEWS_TOOL_CALLS_PER_INVESTIGATION", "10"))

@@ -86,11 +86,13 @@ root_dir/
 │   │   ├── retry.py                # Rate-limit retry/backoff wrapper for API calls
 │   │   ├── research_orchestrator.py# ResearchOrchestrator: owns the shared client; run_streaming() yields ProgressEvents, run() wraps it and returns just the final result
 │   │   ├── research_agent.py       # Tool-calling loop; _TOOL_DECLARATIONS (sent to the API) vs _TOOL_DISPATCH (custom tool implementations, looked up by name) are kept separate on purpose - see agent_tools/
+│   │   ├── tool_call_budget.py     # ToolCallBudget: caps total custom tool calls per investigation (shared across every re-plan iteration)
 │   │   ├── fact_checking_agent.py
 │   │   ├── synthesis_agent.py
 │   │   ├── investigation_qa_agent.py  # Answers a follow-up question, grounded in the full investigation evidence ("Ask the Investigation")
 │   │   └── agent_tools/
 │   │       ├── __init__.py
+│   │       ├── tool_result_cache.py     # cached_tool_call() - caches a custom tool's result per (tool, query) for CACHE_TTL_SECONDS
 │   │       ├── news_search_tool.py      # search_news - The Guardian Open Platform, full article text (needs GUARDIAN_API_KEY)
 │   │       └── newsdata_news_tool.py    # search_newsdata_news - NewsData.io, broader multi-publisher coverage, snippet only (needs NEWSDATA_IO_API_KEY)
 │   │
